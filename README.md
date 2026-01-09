@@ -22,13 +22,6 @@ npm start
 
 Then open: http://localhost:8080/
 
-### Python (static server)
-
-```bash
-python3 -m http.server 8000
-```
-
-Then open: http://localhost:8000/
 
 ## Signal mapping
 

@@ -8,12 +8,13 @@ import { formatDateTime } from '../src/js/utils/format.mjs'
  * Creates a mock canvas and 2D context for renderer tests.
  * @param {number} width
  * @param {number} height
- * @returns {{ canvas: object, calls: Record<string, number>, texts: string[], textCalls: Array<{ text: string, x: number, y: number }> }}
+ * @returns {{ canvas: object, calls: Record<string, number>, texts: string[], textCalls: Array<{ text: string, x: number, y: number, fillStyle: string }> }}
  */
 function createMockCanvas(width, height) {
     const calls = {}
     const texts = []
     const textCalls = []
+    let currentFillStyle = ''
     const count = (name) => {
         calls[name] = (calls[name] || 0) + 1
     }
@@ -28,7 +29,7 @@ function createMockCanvas(width, height) {
         fillText(text, x = 0, y = 0) {
             count('fillText')
             texts.push(String(text))
-            textCalls.push({ text: String(text), x, y })
+            textCalls.push({ text: String(text), x, y, fillStyle: currentFillStyle })
         },
         arc() { count('arc') },
         fill() { count('fill') },
@@ -40,6 +41,14 @@ function createMockCanvas(width, height) {
             return { width: String(text).length * 6 }
         }
     }
+    Object.defineProperty(ctx, 'fillStyle', {
+        get() {
+            return currentFillStyle
+        },
+        set(value) {
+            currentFillStyle = String(value)
+        }
+    })
 
     const canvas = {
         width,
@@ -114,6 +123,34 @@ test('drawImpulseDiagram renders without throwing', () => {
     const maxOpenLabelY = Math.max(...openLabels.map((call) => call.y))
     // The lowest open label should stay above the bottom blue line.
     assert.ok(maxOpenLabelY < diagramBottom)
+})
+
+/**
+ * Ensures the digit label is always rendered in green, even for non-zero digits.
+ * @returns {void}
+ */
+test('drawImpulseDiagram uses green digit labels', () => {
+    const { canvas, textCalls } = createMockCanvas(1400, 150)
+    const cycle = {
+        createdAt: new Date(2024, 0, 1, 0, 0, 0),
+        nsiTimesMs: [0, 50],
+        pulses: 1,
+        digit: 7,
+        fHz: 10,
+        dutyClosed: 50,
+        nsaOpenMs: null,
+        nsrOnMs: null,
+        prellMs: 0,
+        hasNsa: false,
+        hasNsr: false
+    }
+
+    drawImpulseDiagram(canvas, cycle, { ideal: false })
+
+    // The digit label is always rendered in the top-left corner of the diagram.
+    const digitLabelCall = textCalls.find((call) => call.text === '7' && call.x === 6 && call.y === 12)
+    assert.ok(digitLabelCall)
+    assert.equal(digitLabelCall.fillStyle, 'rgb(46,229,107)')
 })
 
 /**

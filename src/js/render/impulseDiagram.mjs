@@ -213,7 +213,8 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
     ctx.fillText('ms', Math.min(W - msWidth - 8, x0 + 1225), axisLabelY)
 
     // channel labels
-    const digitColor = cycle.digit === 0 ? 'rgb(46,229,107)' : 'rgb(255,0,0)'
+    // Keep digit labels green regardless of the dialed number.
+    const digitColor = 'rgb(46,229,107)'
     ctx.fillStyle = digitColor
     ctx.font = '12px Manrope'
     ctx.fillText(String(cycle.digit), 6, 12)

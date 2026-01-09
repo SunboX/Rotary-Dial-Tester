@@ -13,6 +13,17 @@ and modern **ESM (*.mjs)** modules.
 
 From the project folder:
 
+### Node.js / npm
+
+```bash
+npm install
+npm start
+```
+
+Then open: http://localhost:8080/
+
+### Python (static server)
+
 ```bash
 python3 -m http.server 8000
 ```

@@ -1,0 +1,21 @@
+{
+  "name": "rotary-dial-tester",
+  "description": "Rotary dial tester using the Web Serial API",
+  "version": "1.0.0",
+  "author": {
+    "name": "André Fiedler"
+  },
+  "license": "CLOSED",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "start": "node server.mjs",
+    "prepare": "husky install"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "husky": "^8.0.0"
+  }
+}

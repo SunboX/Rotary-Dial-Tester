@@ -85,6 +85,33 @@ body {
     gap: 10px;
 }
 
+.icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(15, 23, 32, 0.65);
+    color: var(--muted);
+    text-decoration: none;
+    transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.icon-link:hover {
+    background: rgba(18, 28, 39, 0.85);
+    border-color: #2b4258;
+    color: var(--text);
+}
+.icon-link:active {
+    transform: translateY(1px);
+}
+.icon-link .icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
 .port-pill {
     padding: 8px 10px;
     border-radius: 999px;
@@ -102,6 +129,45 @@ body {
     grid-template-columns: 380px 1fr;
     gap: 14px;
     padding: 14px;
+}
+
+.page-footer {
+    padding: 0 14px 20px;
+}
+.imprint-card {
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--muted);
+}
+.imprint-card .card-title {
+    margin-bottom: 8px;
+}
+.imprint-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+.imprint-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+}
+.imprint-label {
+    color: #dfeeff;
+    font-weight: 600;
+}
+.imprint-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.imprint-text a {
+    color: var(--text);
+    text-decoration: none;
+}
+.imprint-text a:hover {
+    text-decoration: underline;
 }
 
 .panel {
@@ -519,6 +585,10 @@ dialog::backdrop {
     }
     .header-actions .btn {
         width: 100%;
+    }
+    .header-actions .icon-link {
+        width: 100%;
+        grid-column: 1 / -1;
     }
     .header-actions .port-pill {
         grid-column: 1 / -1;

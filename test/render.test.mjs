@@ -76,7 +76,7 @@ test('drawImpulseDiagram renders without throwing', () => {
         dutyClosed: 50,
         nsaOpenMs: null,
         nsrOnMs: null,
-        prellMs: 0,
+        debounceMs: 0,
         hasNsa: false,
         hasNsr: false
     }
@@ -140,7 +140,7 @@ test('drawImpulseDiagram uses green digit labels', () => {
         dutyClosed: 50,
         nsaOpenMs: null,
         nsrOnMs: null,
-        prellMs: 0,
+        debounceMs: 0,
         hasNsa: false,
         hasNsr: false
     }

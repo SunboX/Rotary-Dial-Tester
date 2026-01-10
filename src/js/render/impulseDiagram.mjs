@@ -251,7 +251,7 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
         ctx.fillText(timestamp, Math.max(x0 + 20, W - tsWidth - 6), timestampY)
     }
 
-    if (cycle.prellMs > 0 && !ideal) {
+    if (cycle.debounceMs > 0 && !ideal) {
         ctx.fillText('modified debounce compensation!', x0 + 900, 20)
     }
 }

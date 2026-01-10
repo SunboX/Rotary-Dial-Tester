@@ -3,6 +3,11 @@
 This app implements a rotary dial tester as a web app using **navigator.serial** (Web Serial API)
 and modern **ESM (*.mjs)** modules.
 
+Live version: https://rotary-dial-tester.com/  
+The hosted build mirrors this repository and is the quickest way to try the tester without local setup. WebSerial requires a Chromium-based browser and will only allow connections on secure origins or `http://localhost`.
+
+Inspiration: This project is inspired by the "NummernschalterPrüfer" app by Klaus Pfeiffer. The goal is to bring a similar rotary dial testing workflow to a modern, browser-based interface.
+
 ## Requirements
 
 - Chromium browser (Chrome / Edge) with WebSerial

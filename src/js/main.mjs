@@ -47,7 +47,7 @@ const gaugeHz = $('#gaugeHz')
 const valDuty = $('#valDuty')
 const gaugeDuty = $('#gaugeDuty')
 
-const selPrell = $('#selPrell')
+const selDebounce = $('#selDebounce')
 const chkDtmf = $('#chkDtmf')
 
 const diagramStrip = $('#diagramStrip')
@@ -129,7 +129,7 @@ function updateButtons() {
     const connected = serial.isOpen
     btnDisconnect.disabled = !connected
     btnStart.disabled = !connected
-    selPrell.disabled = !connected
+    selDebounce.disabled = !connected
     chkDtmf.disabled = !connected
     btnIdeal.disabled = !connected
     btnClear.disabled = !connected
@@ -167,7 +167,7 @@ function setDiagramPlaceholder(visible) {
  */
 async function startTest() {
     if (!tester || tester.running) return
-    tester.setPrellMs(Number(selPrell.value))
+    tester.setDebounceMs(Number(selDebounce.value))
     setWarn('')
     await tester.start()
     if (tester.running) {
@@ -260,8 +260,8 @@ btnStart.addEventListener('click', async () => {
     }
 })
 
-selPrell.addEventListener('change', () => {
-    tester?.setPrellMs(Number(selPrell.value))
+selDebounce.addEventListener('change', () => {
+    tester?.setDebounceMs(Number(selDebounce.value))
 })
 
 btnIdeal.addEventListener('click', () => {
@@ -281,7 +281,7 @@ btnIdeal.addEventListener('click', () => {
         dutyClosed: 38,
         nsaOpenMs: 980,
         nsrOnMs: 980,
-        prellMs: 0,
+        debounceMs: 0,
         hasNsa: true,
         hasNsr: true,
         warnings: []

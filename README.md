@@ -14,6 +14,10 @@ Inspiration: This project is inspired by the "NummernschalterPrüfer" app by Kla
 - The page must be served over `https://` or `http://localhost`
 - A serial adapter that exposes modem status lines (DCD/DSR/RI) and is wired correctly
 
+## Hardware setup
+
+![Hardware setup](./hardware_setup.jpg)
+
 ## Run locally
 
 From the project folder:

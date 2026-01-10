@@ -97,6 +97,7 @@ test('drawImpulseDiagram renders without throwing', () => {
     assert.ok(timestampCall)
     assert.ok(timestampCall.y > 110)
     assert.ok(timestampCall.y < 125)
+    assert.equal(timestampCall.fillStyle, 'rgb(46,229,107)')
     const axisBandHeight = 16
     const diagramBottom = canvas.height - axisBandHeight
     const stateGap = 30

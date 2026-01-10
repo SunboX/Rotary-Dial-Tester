@@ -1,4 +1,5 @@
 import { clamp } from '../utils/format.mjs'
+import { t } from '../i18n.mjs'
 
 /**
  * Analysis like Runtime10 (spread of runs).
@@ -74,12 +75,12 @@ export function drawRunTimeScatter(canvas, cycles) {
     ctx.fillStyle = 'rgb(0,0,0)'
     ctx.font = '12px Manrope'
     for (let i = 1; i <= 10; i++) {
-        ctx.fillText('Run ' + i, 100 * i - 25, 182)
+        ctx.fillText(t('analysis.runtimeRun', { count: i }), 100 * i - 25, 182)
     }
     ctx.save()
     ctx.translate(22, 140)
     ctx.rotate(-Math.PI / 2)
-    ctx.fillText('Grid = 10/100ms', 0, 0)
+    ctx.fillText(t('analysis.runtimeGrid'), 0, 0)
     ctx.restore()
 
     // compute runtimes: like PB uses nsa open if available else last close (last timestamp)
@@ -123,11 +124,11 @@ export function drawRunTimeScatter(canvas, cycles) {
 
     ctx.fillStyle = 'rgb(0,0,255)'
     ctx.font = '13px Manrope'
-    const note = cycles[0]?.hasNsa ? '(measured from first nsi open to nsa open again)' : '(measured from first nsi open to last nsi closed)'
+    const note = cycles[0]?.hasNsa ? t('analysis.runtimeNoteNsa') : t('analysis.runtimeNoteNsi')
     ctx.fillText(note, 500, 14)
 
     ctx.fillStyle = 'rgb(255,0,0)'
-    ctx.fillText(`timing spread of runs: ${Math.round(max - min)}ms`, 862, 14)
+    ctx.fillText(t('analysis.runtimeSpread', { value: Math.round(max - min) }), 862, 14)
 }
 
 /**
@@ -139,7 +140,7 @@ export function drawRunTimeScatter(canvas, cycles) {
 export function buildImpulseSpreadTable(cycles) {
     const c10 = cycles.slice(0, 10)
     const pulses = c10[0]?.pulses ?? 0
-    if (!pulses || pulses < 2) return "<p class='muted'>Not enough pulses for spread analysis.</p>"
+    if (!pulses || pulses < 2) return `<p class='muted'>${t('analysis.spreadNotEnough')}</p>`
 
     // Periodic analysis like PB (without the first off phase):
     // open(off) durations: (t[3]-t[2]), (t[5]-t[4]) ...
@@ -179,13 +180,13 @@ export function buildImpulseSpreadTable(cycles) {
 <table class="table">
   <thead>
     <tr>
-      <th>Period</th>
-      <th>nsi open (pulse) min</th>
-      <th>nsi open max</th>
-      <th>Delta</th>
-      <th>nsi closed (pause) min</th>
-      <th>nsi closed max</th>
-      <th>Delta</th>
+      <th>${t('analysis.spreadPeriod')}</th>
+      <th>${t('analysis.spreadOpenMin')}</th>
+      <th>${t('analysis.spreadOpenMax')}</th>
+      <th>${t('analysis.spreadDelta')}</th>
+      <th>${t('analysis.spreadClosedMin')}</th>
+      <th>${t('analysis.spreadClosedMax')}</th>
+      <th>${t('analysis.spreadDelta')}</th>
     </tr>
   </thead>
   <tbody>
@@ -208,7 +209,7 @@ export function buildImpulseSpreadTable(cycles) {
     const foot = `
   </tbody>
 </table>
-<p class="muted" style="margin-top:10px">Note: matches the original logic (first pulse off phase is not used for period calculation).</p>
+<p class="muted" style="margin-top:10px">${t('analysis.spreadNote')}</p>
 `
     return head + body + foot
 }

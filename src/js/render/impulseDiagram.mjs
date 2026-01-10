@@ -1,4 +1,5 @@
 import { formatDateTime } from '../utils/format.mjs'
+import { t } from '../i18n.mjs'
 
 /**
  * Draws the impulse diagram similar to classic test strip layouts.
@@ -21,6 +22,7 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
     const gridMajor = 'rgb(148,162,251)'
     const signalLabelColor = 'rgb(0,0,0)'
     const waveformColor = 'rgb(0,0,0)'
+    const highlightGreen = 'rgb(46,229,107)'
     // Reserve space under the diagram for axis labels.
     const axisBandHeight = 16
     const diagramBottom = H - axisBandHeight
@@ -38,7 +40,7 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
 
     // Keep the signal lines clear of the left-side state labels.
     ctx.font = '11px Manrope'
-    const stateLabelWidth = Math.max(ctx.measureText('closed').width, ctx.measureText('open').width)
+    const stateLabelWidth = Math.max(ctx.measureText(t('diagram.stateClosed')).width, ctx.measureText(t('diagram.stateOpen')).width)
     const lineStartX = Math.min(x0 - 6, Math.max(60, stateLabelX + stateLabelWidth + 8))
 
     // background
@@ -91,7 +93,7 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
     })
 
     // nsi waveform
-    const t = cycle.nsiTimesMs
+    const nsiTimes = cycle.nsiTimesMs
     ctx.strokeStyle = waveformColor
     ctx.fillStyle = axisLabelColor
     ctx.font = '11px Manrope'
@@ -106,8 +108,8 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
     // draw segments based on toggles, initial=1
     let state = 1
     let prev = 0
-    for (let i = 0; i < t.length; i++) {
-        const cur = t[i]
+    for (let i = 0; i < nsiTimes.length; i++) {
+        const cur = nsiTimes[i]
         const y = state ? nsiRow.closed : nsiRow.open
         ctx.beginPath()
         ctx.moveTo(x0 + prev, y)
@@ -125,8 +127,8 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
             // toggling to 0 now
             const pulseIndex = Math.floor(i / 2) + 1
             // center of open segment will be between this toggle and the next one
-            if (i + 1 < t.length) {
-                const mid = (cur + t[i + 1]) / 2
+            if (i + 1 < nsiTimes.length) {
+                const mid = (cur + nsiTimes[i + 1]) / 2
                 ctx.fillText(String(pulseIndex), x0 + mid - 4, nsiRow.closed + 17)
             }
         }
@@ -166,7 +168,7 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
         ctx.lineTo(W, nsaRow.closed)
         ctx.stroke()
     } else {
-        const note = '- no extra nsa connected -'
+        const note = t('diagram.noNsa')
         const noteWidth = ctx.measureText(note).width
         ctx.fillText(note, x0 + Math.max(20, (W - x0 - noteWidth) / 2), rowMid.nsa + 5)
     }
@@ -196,7 +198,7 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
         ctx.lineTo(W, nsrRow.closed)
         ctx.stroke()
     } else {
-        const note = '- no extra nsr connected -'
+        const note = t('diagram.noNsr')
         const noteWidth = ctx.measureText(note).width
         ctx.fillText(note, x0 + Math.max(20, (W - x0 - noteWidth) / 2), rowMid.nsr + 5)
     }
@@ -209,12 +211,13 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
         const labelWidth = ctx.measureText(label).width
         ctx.fillText(label, x - labelWidth / 2, axisLabelY)
     }
-    const msWidth = ctx.measureText('ms').width
-    ctx.fillText('ms', Math.min(W - msWidth - 8, x0 + 1225), axisLabelY)
+    const msLabel = t('diagram.axisMs')
+    const msWidth = ctx.measureText(msLabel).width
+    ctx.fillText(msLabel, Math.min(W - msWidth - 8, x0 + 1225), axisLabelY)
 
     // channel labels
     // Keep digit labels green regardless of the dialed number.
-    const digitColor = 'rgb(46,229,107)'
+    const digitColor = highlightGreen
     ctx.fillStyle = digitColor
     ctx.font = '12px Manrope'
     ctx.fillText(String(cycle.digit), 6, 12)
@@ -230,28 +233,33 @@ export function drawImpulseDiagram(canvas, cycle, { ideal = false } = {}) {
     // state labels (draw after waveforms to avoid overlap)
     ctx.fillStyle = axisLabelColor
     ctx.font = '11px Manrope'
-    ctx.fillText('closed', stateLabelX, nsiRow.closed + 4)
-    ctx.fillText('open', stateLabelX, nsiRow.open + 4)
-    ctx.fillText('closed', stateLabelX, nsrRow.closed + 4)
-    ctx.fillText('open', stateLabelX, nsrRow.open + 4)
-    ctx.fillText('closed', stateLabelX, nsaRow.closed + 4)
-    ctx.fillText('open', stateLabelX, nsaRow.open - 4)
+    const stateClosed = t('diagram.stateClosed')
+    const stateOpen = t('diagram.stateOpen')
+    ctx.fillText(stateClosed, stateLabelX, nsiRow.closed + 4)
+    ctx.fillText(stateOpen, stateLabelX, nsiRow.open + 4)
+    ctx.fillText(stateClosed, stateLabelX, nsrRow.closed + 4)
+    ctx.fillText(stateOpen, stateLabelX, nsrRow.open + 4)
+    ctx.fillText(stateClosed, stateLabelX, nsaRow.closed + 4)
+    ctx.fillText(stateOpen, stateLabelX, nsaRow.open - 4)
 
     // overlay text
     ctx.fillStyle = axisLabelColor
     if (ideal) {
-        ctx.fillText('- example of an ideal rotary dial only! -', 150, 20)
-        ctx.fillText('- example of an ideal rotary dial only! -', 150, 80)
-        ctx.fillText('- example of an ideal rotary dial only! -', 150, 130)
+        const idealNote = t('diagram.idealNote')
+        ctx.fillText(idealNote, 150, 20)
+        ctx.fillText(idealNote, 150, 80)
+        ctx.fillText(idealNote, 150, 130)
     } else {
         const timestamp = formatDateTime(cycle.createdAt)
         // Place the timestamp between the nsa lines so it stays readable.
         const timestampY = rowMid.nsa + 4
         const tsWidth = ctx.measureText(timestamp).width
+        ctx.fillStyle = highlightGreen
         ctx.fillText(timestamp, Math.max(x0 + 20, W - tsWidth - 6), timestampY)
+        ctx.fillStyle = axisLabelColor
     }
 
     if (cycle.debounceMs > 0 && !ideal) {
-        ctx.fillText('modified debounce compensation!', x0 + 900, 20)
+        ctx.fillText(t('diagram.debounceNote'), x0 + 900, 20)
     }
 }

@@ -11,36 +11,22 @@
             <div class="title">
                 <img class="app-logo" src="./assets/logo/rotary-dial-tester.svg" alt="Rotary dial tester logo" />
                 <div class="title-text">
-                    <h1>Rotary Dial Tester</h1>
-                    <div class="subtitle">Testing &amp; adjusting mechanical rotary dials using Web Serial and an RS-232 interface</div>
+                    <h1 data-i18n="app.title">Rotary Dial Tester</h1>
+                    <div class="subtitle" data-i18n="app.subtitle">Testing &amp; adjusting mechanical rotary dials using Web Serial and an RS-232 interface</div>
                 </div>
             </div>
 
             <div class="header-actions">
-                <button id="btnConnect" class="btn primary">Connect COM</button>
-                <button id="btnDisconnect" class="btn" disabled>Disconnect</button>
-                <div class="port-pill" id="portInfo" title="Port info">not connected</div>
-                <a
-                    class="icon-link"
-                    href="https://github.com/SunboX/Rotary-Dial-Tester"
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="GitHub repository"
-                    title="GitHub"
-                >
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                            d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.6-3.37-1.34-3.37-1.34-.45-1.15-1.11-1.46-1.11-1.46-.91-.62.07-.61.07-.61 1.01.07 1.54 1.03 1.54 1.03.9 1.53 2.36 1.09 2.94.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.95 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.5 9.5 0 0 1 12 6.8c.85 0 1.71.12 2.51.34 1.9-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.85-2.34 4.7-4.57 4.95.36.31.68.92.68 1.85 0 1.34-.01 2.41-.01 2.74 0 .26.18.58.69.48A10 10 0 0 0 22 12c0-5.52-4.48-10-10-10z"
-                        />
-                    </svg>
-                </a>
+                <button id="btnConnect" class="btn primary" data-i18n="header.connect">Connect COM</button>
+                <button id="btnDisconnect" class="btn" disabled data-i18n="header.disconnect">Disconnect</button>
+                <div class="port-pill" id="portInfo" data-i18n-attr="title:header.portInfoTitle" title="Port info">not connected</div>
             </div>
         </header>
 
         <main class="layout">
             <section class="panel left">
                 <div class="card">
-                    <div class="card-title">Status</div>
+                    <div class="card-title" data-i18n="status.title">Status</div>
 
                     <div class="status-row">
                         <div class="led-group">
@@ -59,9 +45,9 @@
                         </div>
 
                         <div class="kv">
-                            <div class="kv-row"><span class="k">Digit</span><span class="v" id="valDigit">-</span></div>
-                            <div class="kv-row"><span class="k">Pulses</span><span class="v" id="valPulses">0</span></div>
-                            <div class="kv-row"><span class="k">Diagram</span><span class="v" id="valDiagram">0/10</span></div>
+                            <div class="kv-row"><span class="k" data-i18n="status.digit">Digit</span><span class="v" id="valDigit">-</span></div>
+                            <div class="kv-row"><span class="k" data-i18n="status.pulses">Pulses</span><span class="v" id="valPulses">0</span></div>
+                            <div class="kv-row"><span class="k" data-i18n="status.diagram">Diagram</span><span class="v" id="valDiagram">0/10</span></div>
                         </div>
                     </div>
 
@@ -69,40 +55,40 @@
 
                     <div class="gauge">
                         <div class="gauge-head">
-                            <span>Pulse frequency</span>
+                            <span data-i18n="gauge.frequency">Pulse frequency</span>
                             <span class="gauge-value"><span id="valHz">0.0</span> Hz</span>
                         </div>
                         <input id="gaugeHz" type="range" min="7" max="13" step="0.1" value="7" disabled />
-                        <div class="gauge-hint">Nominal 10 Hz (tolerance 9.1-11.1 Hz)</div>
+                        <div class="gauge-hint" data-i18n="gauge.frequencyHint">Nominal 10 Hz (tolerance 9.1-11.1 Hz)</div>
                     </div>
 
                     <div class="gauge">
                         <div class="gauge-head">
-                            <span>Pulse/pause ratio</span>
-                            <span class="gauge-value"><span id="valDuty">0</span>% nsi closed</span>
+                            <span data-i18n="gauge.ratio">Pulse/pause ratio</span>
+                            <span class="gauge-value"><span id="valDuty">0</span>% <span data-i18n="gauge.ratioSuffix">nsi closed</span></span>
                         </div>
                         <input id="gaugeDuty" type="range" min="10" max="70" step="1" value="10" disabled />
-                        <div class="gauge-hint">Display equals (pause / (pulse+pause)) - warning outside 10-70%</div>
+                        <div class="gauge-hint" data-i18n="gauge.ratioHint">Display equals (pause / (pulse+pause)) - warning outside 10-70%</div>
                     </div>
 
                     <div class="divider"></div>
 
-                    <div class="pulse-strip" aria-label="Pulse display">
-                        <div class="pulse-strip-title">Pulses (1...10)</div>
+                    <div class="pulse-strip" data-i18n-attr="aria-label:pulseStrip.ariaLabel" aria-label="Pulse display">
+                        <div class="pulse-strip-title" data-i18n="pulseStrip.title">Pulses (1...10)</div>
                         <div class="pulse-dots" id="pulseDots"></div>
-                        <div class="pulse-strip-hint">Note: For frequency testing, choose digits 2-0 (1 is not a full period).</div>
+                        <div class="pulse-strip-hint" data-i18n="pulseStrip.hint">Note: For frequency testing, choose digits 2-0 (1 is not a full period).</div>
                     </div>
                 </div>
 
                 <div class="card">
-                    <div class="card-title">Controls</div>
+                    <div class="card-title" data-i18n="controls.title">Controls</div>
 
                     <div class="controls">
                         <button id="btnStart" class="btn toggle" disabled>Start Test</button>
 
                         <div class="row">
                             <label class="field">
-                                <span>Debounce (EP)</span>
+                                <span data-i18n="controls.debounce">Debounce (EP)</span>
                                 <select id="selDebounce" disabled>
                                     <option value="0">EP1 (~1 ms)</option>
                                     <option value="1">EP2</option>
@@ -120,33 +106,33 @@
 
                             <label class="check">
                                 <input type="checkbox" id="chkDtmf" checked disabled />
-                                <span>DTMF</span>
+                                <span data-i18n="controls.dtmf">DTMF</span>
                             </label>
                         </div>
 
                         <div class="row">
-                            <button id="btnIdeal" class="btn" disabled>Ideal rotary dial</button>
-                            <button id="btnClear" class="btn" disabled>Clear diagrams</button>
+                            <button id="btnIdeal" class="btn" disabled data-i18n="controls.ideal">Ideal rotary dial</button>
+                            <button id="btnClear" class="btn" disabled data-i18n="controls.clear">Clear diagrams</button>
                         </div>
 
                         <div class="row">
-                            <button id="btnPrint" class="btn" disabled>Print test strip</button>
-                            <button id="btnSavePng" class="btn" disabled>Save PNG</button>
-                            <button id="btnSaveJpg" class="btn" disabled>Save JPG</button>
+                            <button id="btnPrint" class="btn" disabled data-i18n="controls.print">Print test strip</button>
+                            <button id="btnSavePng" class="btn" disabled data-i18n="controls.savePng">Save PNG</button>
+                            <button id="btnSaveJpg" class="btn" disabled data-i18n="controls.saveJpg">Save JPG</button>
                         </div>
 
                         <div class="divider"></div>
 
                         <div class="row analysis-row">
-                            <button id="btnRunTime" class="btn" disabled>Analysis: runtime (10x)</button>
-                            <button id="btnSpread" class="btn" disabled>Analysis: pulse/pause (10x)</button>
+                            <button id="btnRunTime" class="btn" disabled data-i18n="controls.analysisRuntime">Analysis: runtime (10x)</button>
+                            <button id="btnSpread" class="btn" disabled data-i18n="controls.analysisSpread">Analysis: pulse/pause (10x)</button>
                         </div>
-                    <div class="analysis-note">
+                    <div class="analysis-note" data-i18n="controls.analysisNote">
                         Note: Unlocks after 10 diagrams with the same digit. Runtime shows timing spread across 10 cycles; pulse/pause lists min/max and delta per period.
                     </div>
 
                         <div class="row">
-                            <button id="btnHelp" class="btn">Help</button>
+                            <button id="btnHelp" class="btn" data-i18n="controls.help">Help</button>
                         </div>
 
                         <div class="hint" id="warnBox" hidden></div>
@@ -156,9 +142,15 @@
 
                     <section class="panel main">
                         <div class="card">
-                            <div class="card-title">Diagrams</div>
-                            <div class="diagram-strip" id="diagramStrip" role="region" aria-label="Measurement diagrams">
-                                <div class="diagram-placeholder" id="diagramPlaceholder">No diagrams yet.</div>
+                            <div class="card-title" data-i18n="diagrams.title">Diagrams</div>
+                            <div
+                                class="diagram-strip"
+                                id="diagramStrip"
+                                role="region"
+                                data-i18n-attr="aria-label:diagrams.ariaLabel"
+                                aria-label="Measurement diagrams"
+                            >
+                                <div class="diagram-placeholder" id="diagramPlaceholder" data-i18n="diagrams.empty">No diagrams yet.</div>
                             </div>
                         </div>
 
@@ -172,11 +164,11 @@
             </section>
         </main>
         <footer class="page-footer">
-            <div class="card imprint-card">
-                <div class="card-title">Imprint</div>
+            <div class="card footer-card">
+                <div class="card-title" data-i18n="imprint.title">Imprint</div>
                 <div class="imprint-body">
                     <div class="imprint-block">
-                        <div class="imprint-label">Responsible for this website</div>
+                        <div class="imprint-label" data-i18n="imprint.responsible">Responsible for this website</div>
                         <div class="imprint-text">
                             <div>André Fiedler</div>
                             <div>Rädelstraße 7</div>
@@ -185,10 +177,51 @@
                         </div>
                     </div>
                     <div class="imprint-block">
-                        <div class="imprint-label">Contact</div>
+                        <div class="imprint-label" data-i18n="imprint.contact">Contact</div>
                         <div class="imprint-text">
                             <a href="mailto:mail@andrefiedler.de">mail@andrefiedler.de</a>
                         </div>
+                    </div>
+                    <div class="imprint-block">
+                        <div class="imprint-label" data-i18n="language.label">Language</div>
+                        <div class="imprint-text">
+                            <select id="selLocale" class="lang-select" data-i18n-attr="aria-label:language.label" aria-label="Language">
+                                <option value="en" data-i18n="language.english">English</option>
+                                <option value="de" data-i18n="language.german">German</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="footer-actions">
+                        <a
+                            class="icon-link"
+                            href="https://github.com/SunboX/Rotary-Dial-Tester"
+                            target="_blank"
+                            rel="noreferrer"
+                            data-i18n-attr="aria-label:header.githubAria,title:header.githubTitle"
+                            aria-label="GitHub repository"
+                            title="GitHub"
+                        >
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path
+                                    d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.6-3.37-1.34-3.37-1.34-.45-1.15-1.11-1.46-1.11-1.46-.91-.62.07-.61.07-.61 1.01.07 1.54 1.03 1.54 1.03.9 1.53 2.36 1.09 2.94.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.95 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.5 9.5 0 0 1 12 6.8c.85 0 1.71.12 2.51.34 1.9-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.85-2.34 4.7-4.57 4.95.36.31.68.92.68 1.85 0 1.34-.01 2.41-.01 2.74 0 .26.18.58.69.48A10 10 0 0 0 22 12c0-5.52-4.48-10-10-10z"
+                                />
+                            </svg>
+                        </a>
+                        <a
+                            class="icon-link"
+                            href="https://mastodon.social/@sonnenkiste"
+                            target="_blank"
+                            rel="me noreferrer"
+                            data-i18n-attr="aria-label:social.mastodonAria,title:social.mastodonTitle"
+                            aria-label="Mastodon profile"
+                            title="Mastodon"
+                        >
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path
+                                    d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 0 0 .023-.043v-1.809a.052.052 0 0 0-.02-.041.053.053 0 0 0-.046-.01 20.282 20.282 0 0 1-4.709.545c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 0 1-.319-1.433.053.053 0 0 1 .066-.054c1.517.363 3.072.546 4.632.546.376 0 .75 0 1.125-.01 1.57-.044 3.224-.124 4.768-.422.038-.008.077-.015.11-.024 2.435-.464 4.753-1.92 4.989-5.604.008-.145.03-1.52.03-1.67.002-.512.167-3.63-.024-5.545zm-3.748 9.195h-2.561V8.29c0-1.309-.55-1.976-1.67-1.976-1.23 0-1.846.79-1.846 2.35v3.403h-2.546V8.663c0-1.56-.617-2.35-1.848-2.35-1.112 0-1.668.668-1.67 1.977v6.218H4.822V8.102c0-1.31.337-2.35 1.011-3.12.696-.77 1.608-1.164 2.74-1.164 1.311 0 2.302.5 2.962 1.498l.638 1.06.638-1.06c.66-.999 1.65-1.498 2.96-1.498 1.13 0 2.043.395 2.74 1.164.675.77 1.012 1.81 1.012 3.12z"
+                                />
+                            </svg>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -196,34 +229,44 @@
 
         <dialog id="dlgHelp">
             <div class="dialog-head">
-                <div class="dialog-title">Help - COM/Program</div>
-                <button id="btnCloseHelp" class="btn">Close</button>
+                <div class="dialog-title" data-i18n="help.title">Help - COM/Program</div>
+                <button id="btnCloseHelp" class="btn" data-i18n="help.close">Close</button>
             </div>
             <div class="dialog-body">
-                <p><strong>Browser:</strong> WebSerial works in Chromium-based browsers (Chrome, Edge). The page must run over <code>https://</code> or <code>http://localhost</code>.</p>
+                <p data-i18n-html="help.browser"><strong>Browser:</strong> WebSerial works in Chromium-based browsers (Chrome, Edge). The page must run over <code>https://</code> or <code>http://localhost</code>.</p>
 
-                <p><strong>Signals (hardware mapping):</strong></p>
+                <p data-i18n-html="help.signalsTitle"><strong>Signals (hardware mapping):</strong></p>
                 <ul>
-                    <li><code>DCD</code> -> <strong>nsi</strong> (pulse contact)</li>
-                    <li><code>DSR</code> -> <strong>nsr</strong> (optional, additional contact)</li>
-                    <li><code>RI</code> -> <strong>nsa</strong> (optional, off-normal)</li>
-                    <li><code>RTS</code> is set to <code>1</code> at start (as "H source" in the original).</li>
+                    <li data-i18n-html="help.signalDcd"><code>DCD</code> -> <strong>nsi</strong> (pulse contact)</li>
+                    <li data-i18n-html="help.signalDsr"><code>DSR</code> -> <strong>nsr</strong> (optional, additional contact)</li>
+                    <li data-i18n-html="help.signalRi"><code>RI</code> -> <strong>nsa</strong> (optional, off-normal)</li>
+                    <li data-i18n-html="help.signalRts"><code>RTS</code> is set to <code>1</code> at start (as "H source" in the original).</li>
                 </ul>
 
-                <p><strong>Usage:</strong> 1) "Connect COM", 2) "Start Test", 3) dial digits 2-0. After each dial a diagram is created.</p>
+                <p data-i18n-html="help.usage"><strong>Usage:</strong> 1) "Connect COM", 2) "Start Test", 3) dial digits 2-0. After each dial a diagram is created.</p>
 
-                <p><strong>Debounce (EP):</strong> Corresponds to the additional wait time between two signal reads for <code>DCD</code>. EP1 is the default. Higher values can compensate bounce but distort the overall measurement.</p>
+                <p data-i18n-html="help.debounce"><strong>Debounce (EP):</strong> Corresponds to the additional wait time between two signal reads for <code>DCD</code>. EP1 is the default. Higher values can compensate bounce but distort the overall measurement.</p>
 
-                <p><strong>Analysis:</strong> If 10 diagrams in a row with the same digit are captured, both analyses are enabled.</p>
+                <p data-i18n-html="help.analysis"><strong>Analysis:</strong> If 10 diagrams in a row with the same digit are captured, both analyses are enabled.</p>
 
-                <p><strong>Rotary dial testing and adjustment:</strong></p>
+                <p data-i18n-html="help.adjustmentTitle"><strong>Rotary dial testing and adjustment:</strong></p>
                 <ul>
-                    <li>Mis-dials can happen when the dial runs too fast or too slow. The return speed is mainly controlled by the centrifugal governor and mechanical friction.</li>
-                    <li>Pulse count (IWF): digit 1..9 creates 1..9 pulses, digit 0 creates 10 pulses.</li>
-                    <li>Nominal timing is 10 pulses per second (100 ms per pulse) with about 62 ms open and 38 ms closed (ratio ~1.6:1). Allowed tolerances are 90-110 ms per pulse (9.09-11.1 Hz) and a ratio of about 1.3:1 to 1.9:1. Some exchanges can be more strict.</li>
-                    <li>Contacts: <strong>nsi</strong> is closed at rest and generates the pulse interruptions; <strong>nsa</strong> is open at rest and closes during dialing. With 3-wire dials, nsi and nsa are in series and can be identified with a continuity tester.</li>
-                    <li>Optional <strong>nsr</strong> (often on 6-wire dials) suppresses two initial pulses to enforce a clear pause between digits.</li>
-                    <li>Maintenance tips: slow dials are often caused by old grease. Clean with brake cleaner, then lubricate very sparingly with tiny drops of suitable oil. Avoid acetone/alcohol/harsh solvents on plastics and avoid silicone oil. If mis-dials persist, clean the contacts with a paper strip (optionally moistened with contact cleaner).</li>
+                    <li data-i18n-html="help.adjustmentMisDial">
+                        Mis-dials can happen when the dial runs too fast or too slow. The return speed is mainly controlled by the centrifugal governor and mechanical friction.
+                    </li>
+                    <li data-i18n-html="help.adjustmentPulseCount">Pulse count (IWF): digit 1..9 creates 1..9 pulses, digit 0 creates 10 pulses.</li>
+                    <li data-i18n-html="help.adjustmentTiming">
+                        Nominal timing is 10 pulses per second (100 ms per pulse) with about 62 ms open and 38 ms closed (ratio ~1.6:1). Allowed tolerances are 90-110 ms per pulse (9.09-11.1 Hz) and a ratio of about 1.3:1 to 1.9:1. Some exchanges can be more strict.
+                    </li>
+                    <li data-i18n-html="help.adjustmentContacts">
+                        Contacts: <strong>nsi</strong> is closed at rest and generates the pulse interruptions; <strong>nsa</strong> is open at rest and closes during dialing. With 3-wire dials, nsi and nsa are in series and can be identified with a continuity tester.
+                    </li>
+                    <li data-i18n-html="help.adjustmentNsr">
+                        Optional <strong>nsr</strong> (often on 6-wire dials) suppresses two initial pulses to enforce a clear pause between digits.
+                    </li>
+                    <li data-i18n-html="help.adjustmentMaintenance">
+                        Maintenance tips: slow dials are often caused by old grease. Clean with brake cleaner, then lubricate very sparingly with tiny drops of suitable oil. Avoid acetone/alcohol/harsh solvents on plastics and avoid silicone oil. If mis-dials persist, clean the contacts with a paper strip (optionally moistened with contact cleaner).
+                    </li>
                 </ul>
             </div>
         </dialog>

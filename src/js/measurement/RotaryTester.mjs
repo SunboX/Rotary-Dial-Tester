@@ -1,4 +1,5 @@
 import { sleep } from '../utils/sleep.mjs'
+import { t } from '../i18n.mjs'
 
 /**
  * WebSerial implementation of the core rotary-dial test logic:
@@ -84,7 +85,7 @@ export class RotaryTester {
      */
     async start() {
         if (this.running) return
-        if (!this.serial.isOpen) throw new Error('Port not connected.')
+        if (!this.serial.isOpen) throw new Error(t('errors.portNotConnected'))
 
         // Initial status read (PB: check if nsi is open)
         const sig = await this.serial.getSignals()
@@ -94,7 +95,7 @@ export class RotaryTester {
 
         // PB: DCD should be 1, but we keep running and wait for the first closure.
         if (!this.nsiState) {
-            this.onWarn?.('nsi is open (DCD=0). Waiting for the first closure.')
+            this.onWarn?.(t('warnings.nsiOpen'))
         }
 
         this.running = true
@@ -287,8 +288,8 @@ export class RotaryTester {
 
         // Plausibility checks (as in PB)
         const warnings = []
-        if (fHz < 7 || fHz > 13) warnings.push('WARNING: Dial speed is outside the valid range (7-13 Hz).')
-        if (dutyClosed < 10 || dutyClosed > 70) warnings.push('WARNING: nsi pulse/pause ratio is outside the valid range (10-70%).')
+        if (fHz < 7 || fHz > 13) warnings.push(t('warnings.dialSpeed'))
+        if (dutyClosed < 10 || dutyClosed > 70) warnings.push(t('warnings.pulsePauseRatio'))
 
         return {
             createdAt: new Date(),

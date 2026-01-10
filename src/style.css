@@ -134,18 +134,19 @@ body {
 .page-footer {
     padding: 0 14px 20px;
 }
-.imprint-card {
+.footer-card {
     padding: 12px 14px;
     font-size: 12px;
     color: var(--muted);
 }
-.imprint-card .card-title {
+.footer-card .card-title {
     margin-bottom: 8px;
 }
 .imprint-body {
     display: flex;
     flex-wrap: wrap;
     gap: 24px;
+    align-items: flex-start;
 }
 .imprint-block {
     display: flex;
@@ -161,6 +162,25 @@ body {
     display: flex;
     flex-direction: column;
     gap: 2px;
+}
+.footer-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.lang-select {
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(15, 23, 32, 0.65);
+    color: var(--text);
+    font-size: 12px;
+    min-width: 160px;
+}
+.lang-select:focus-visible {
+    outline: 2px solid rgba(74, 163, 255, 0.6);
+    outline-offset: 2px;
 }
 .imprint-text a {
     color: var(--text);
@@ -610,5 +630,13 @@ dialog::backdrop {
     :root {
         --bg-fade-1: 2200px 1500px;
         --bg-fade-2: 1800px 1400px;
+    }
+    .footer-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .footer-actions .icon-link {
+        width: 100%;
     }
 }

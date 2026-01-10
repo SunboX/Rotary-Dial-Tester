@@ -4,6 +4,7 @@ import { DtmfPlayer } from './audio/DtmfPlayer.mjs'
 import { drawImpulseDiagram } from './render/impulseDiagram.mjs'
 import { drawRunTimeScatter, buildImpulseSpreadTable } from './render/analysis.mjs'
 import { composeStripImage, downloadCanvas, printCanvas } from './export.mjs'
+import { applyTranslations, setLocale, t } from './i18n.mjs'
 
 /**
  * Shorthand for document.querySelector.
@@ -49,6 +50,7 @@ const gaugeDuty = $('#gaugeDuty')
 
 const selDebounce = $('#selDebounce')
 const chkDtmf = $('#chkDtmf')
+const selLocale = $('#selLocale')
 
 const diagramStrip = $('#diagramStrip')
 const diagramPlaceholder = $('#diagramPlaceholder')
@@ -57,7 +59,6 @@ const pulseDots = $('#pulseDots')
 for (let i = 1; i <= 10; i++) {
     const d = document.createElement('span')
     d.className = 'pulse-dot'
-    d.title = `Pulse ${i}`
     pulseDots.appendChild(d)
 }
 
@@ -69,6 +70,165 @@ let tester = null
 /** @type {Array<object>} */
 let cycles = [] // last cycles (max 10)
 let diagramCount = 0
+const diagramCycleMap = new WeakMap()
+let activeAnalysis = null
+
+/**
+ * Reads the last selected locale from storage if available.
+ * @returns {string|null}
+ */
+function loadStoredLocale() {
+    // Guard against storage access in restricted contexts.
+    try {
+        return localStorage.getItem('locale')
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Persists the selected locale for the next visit.
+ * @param {string} locale
+ * @returns {void}
+ */
+function saveStoredLocale(locale) {
+    // Persist only when storage is available.
+    try {
+        localStorage.setItem('locale', locale)
+    } catch {}
+}
+
+/**
+ * Updates the Start/Stop button label based on the tester state.
+ * @returns {void}
+ */
+function updateStartButtonLabel() {
+    const labelKey = tester?.running ? 'controls.stop' : 'controls.start'
+    btnStart.textContent = t(labelKey)
+}
+
+/**
+ * Updates pulse dot tooltips for the active locale.
+ * @returns {void}
+ */
+function updatePulseDotTitles() {
+    // Keep titles localized while the dots stay static.
+    const dots = [...pulseDots.children]
+    dots.forEach((dot, index) => {
+        dot.title = t('pulseStrip.dotTitle', { count: index + 1 })
+    })
+}
+
+/**
+ * Updates the analysis title based on the current analysis mode.
+ * @returns {void}
+ */
+function refreshAnalysisTitle() {
+    // Default to the generic title when no analysis is active.
+    if (activeAnalysis === 'runtime') {
+        analysisTitle.textContent = t('analysis.runtimeTitle')
+        return
+    }
+    if (activeAnalysis === 'spread') {
+        analysisTitle.textContent = t('analysis.spreadTitle')
+        return
+    }
+    analysisTitle.textContent = t('analysis.title')
+}
+
+/**
+ * Rebuilds analysis visuals when the locale changes.
+ * @returns {void}
+ */
+function refreshAnalysisContent() {
+    // Only redraw when an analysis view is currently visible.
+    if (analysisCard.hidden) return
+    if (activeAnalysis === 'runtime') {
+        analysisTableWrap.innerHTML = ''
+        drawRunTimeScatter(analysisCanvas, cycles)
+        return
+    }
+    if (activeAnalysis === 'spread') {
+        const ctx = analysisCanvas.getContext('2d')
+        ctx.clearRect(0, 0, analysisCanvas.width, analysisCanvas.height)
+        analysisTableWrap.innerHTML = buildImpulseSpreadTable(cycles)
+    }
+}
+
+/**
+ * Re-renders diagram canvases and labels for the active locale.
+ * @returns {void}
+ */
+function refreshDiagramCards() {
+    const canvases = [...diagramStrip.querySelectorAll('canvas')]
+    canvases.forEach((canvas) => {
+        const entry = diagramCycleMap.get(canvas)
+        if (!entry) return
+        drawImpulseDiagram(canvas, entry.cycle, { ideal: entry.ideal })
+        const card = canvas.closest('.diagram-card')
+        if (!card) return
+        const metaLeft = card.querySelector('.diagram-meta-left')
+        if (metaLeft) {
+            metaLeft.textContent = ''
+            const digitStrong = document.createElement('strong')
+            digitStrong.textContent = String(entry.cycle.digit)
+            metaLeft.appendChild(digitStrong)
+            metaLeft.appendChild(
+                document.createTextNode(` - ${t('diagrams.pulsesMeta', { count: entry.cycle.pulses })}`)
+            )
+        }
+        const downloadBtn = card.querySelector('.diagram-download')
+        if (downloadBtn) {
+            downloadBtn.textContent = t('diagrams.downloadPng')
+        }
+    })
+}
+
+/**
+ * Applies localization to static and dynamic UI strings.
+ * @returns {void}
+ */
+function refreshLocalizedUi() {
+    // Re-sync text that is generated dynamically in JavaScript.
+    updateStartButtonLabel()
+    updatePulseDotTitles()
+    refreshAnalysisTitle()
+    refreshAnalysisContent()
+    refreshDiagramCards()
+    setPortLabel()
+}
+
+/**
+ * Sets the locale and applies translations across the document.
+ * @param {string} locale
+ * @returns {string}
+ */
+function applyLocale(locale) {
+    const resolvedLocale = setLocale(locale)
+    applyTranslations()
+    document.title = t('app.title')
+    refreshLocalizedUi()
+    return resolvedLocale
+}
+
+/**
+ * Initializes localization and wires the language selector.
+ * @returns {void}
+ */
+function initLocalization() {
+    const storedLocale = loadStoredLocale()
+    let initialLocale = storedLocale
+    if (!initialLocale && typeof navigator !== 'undefined') {
+        initialLocale = navigator.language
+    }
+    const resolvedLocale = applyLocale(initialLocale || 'en')
+    if (!selLocale) return
+    selLocale.value = resolvedLocale
+    selLocale.addEventListener('change', () => {
+        const nextLocale = applyLocale(selLocale.value)
+        saveStoredLocale(nextLocale)
+    })
+}
 
 /**
  * Shows or hides the warning box.
@@ -172,7 +332,7 @@ async function startTest() {
     await tester.start()
     if (tester.running) {
         btnStart.classList.add('on')
-        btnStart.textContent = 'Stop Test'
+        updateStartButtonLabel()
     }
 }
 
@@ -183,7 +343,7 @@ async function startTest() {
 function stopTest() {
     tester?.stop()
     btnStart.classList.remove('on')
-    btnStart.textContent = 'Start Test'
+    updateStartButtonLabel()
 }
 
 btnConnect.addEventListener('click', async () => {
@@ -310,6 +470,8 @@ btnClear.addEventListener('click', () => {
 
     analysisCard.hidden = true
     analysisTableWrap.innerHTML = ''
+    activeAnalysis = null
+    refreshAnalysisTitle()
     // Show the empty-state hint after clearing all diagrams.
     setDiagramPlaceholder(true)
     updateButtons()
@@ -340,7 +502,8 @@ btnRunTime.addEventListener('click', () => {
     const ready = cycles.length === 10 && cycles.every((c) => c.digit === cycles[0].digit)
     if (!ready) return
     analysisCard.hidden = false
-    analysisTitle.textContent = 'Analysis: runtime (10x)'
+    activeAnalysis = 'runtime'
+    refreshAnalysisTitle()
     analysisTableWrap.innerHTML = ''
     drawRunTimeScatter(analysisCanvas, cycles)
 })
@@ -349,7 +512,8 @@ btnSpread.addEventListener('click', () => {
     const ready = cycles.length === 10 && cycles.every((c) => c.digit === cycles[0].digit)
     if (!ready) return
     analysisCard.hidden = false
-    analysisTitle.textContent = 'Analysis: pulse/pause (10x)'
+    activeAnalysis = 'spread'
+    refreshAnalysisTitle()
     // optional: clear the canvas and show the table
     const ctx = analysisCanvas.getContext('2d')
     ctx.clearRect(0, 0, analysisCanvas.width, analysisCanvas.height)
@@ -394,20 +558,22 @@ function addDiagram(cycle, { ideal = false } = {}) {
     const meta = document.createElement('div')
     meta.className = 'diagram-meta'
     const metaLeft = document.createElement('div')
+    metaLeft.className = 'diagram-meta-left'
     const digitStrong = document.createElement('strong')
     digitStrong.textContent = String(cycle.digit)
     metaLeft.appendChild(digitStrong)
-    metaLeft.appendChild(document.createTextNode(` - ${cycle.pulses} pulses`))
+    metaLeft.appendChild(document.createTextNode(` - ${t('diagrams.pulsesMeta', { count: cycle.pulses })}`))
 
     const metaRight = document.createElement('div')
     metaRight.className = 'diagram-actions'
     const stats = document.createElement('div')
+    stats.className = 'diagram-stats'
     stats.textContent = `${cycle.fHz.toFixed(1)} Hz - ${cycle.dutyClosed}%`
 
     const btnDownload = document.createElement('button')
     btnDownload.type = 'button'
-    btnDownload.className = 'btn small'
-    btnDownload.textContent = 'Download PNG'
+    btnDownload.className = 'btn small diagram-download'
+    btnDownload.textContent = t('diagrams.downloadPng')
     btnDownload.addEventListener('click', (event) => {
         event.stopPropagation()
         downloadCanvas(canvas, buildDiagramFilename(cycle, 'png'), 'image/png')
@@ -419,6 +585,8 @@ function addDiagram(cycle, { ideal = false } = {}) {
     meta.appendChild(metaRight)
     card.appendChild(meta)
     card.appendChild(canvas)
+
+    diagramCycleMap.set(canvas, { cycle, ideal })
 
     diagramStrip.appendChild(card)
     cycles.push(cycle)
@@ -433,6 +601,6 @@ function addDiagram(cycle, { ideal = false } = {}) {
 }
 
 // initial state
-setPortLabel()
+initLocalization()
 setDiagramPlaceholder(true)
 updateButtons()

@@ -1,3 +1,5 @@
+import { t } from '../i18n.mjs'
+
 /**
  * Thin wrapper around the Web Serial API for connecting and reading signals.
  */
@@ -26,7 +28,7 @@ export class SerialManager {
      */
     async connect() {
         if (!('serial' in navigator)) {
-            throw new Error('WebSerial not available. Use Chrome/Edge and https:// or localhost.')
+            throw new Error(t('errors.webSerialMissing'))
         }
         const port = await navigator.serial.requestPort()
         await port.open({
@@ -64,7 +66,7 @@ export class SerialManager {
      * @returns {Promise<object>}
      */
     async getSignals() {
-        if (!this.#port) throw new Error('Port not open.')
+        if (!this.#port) throw new Error(t('errors.portNotOpen'))
         return await this.#port.getSignals()
     }
 
@@ -73,7 +75,7 @@ export class SerialManager {
      * @returns {string}
      */
     getInfoString() {
-        if (!this.#port) return 'not connected'
+        if (!this.#port) return t('port.notConnected')
         try {
             const info = this.#port.getInfo?.()
             if (info && (info.usbVendorId || info.usbProductId)) {
@@ -82,6 +84,6 @@ export class SerialManager {
                 return `USB VID ${vid} - PID ${pid}`
             }
         } catch {}
-        return 'connected'
+        return t('port.connected')
     }
 }

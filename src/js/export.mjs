@@ -1,3 +1,5 @@
+import { t } from './i18n.mjs'
+
 /**
  * Export/print diagrams: creates a long image (PNG/JPG) from all visible diagram canvases.
  * @param {Array<HTMLCanvasElement>} diagramCanvases
@@ -55,14 +57,14 @@ export function printCanvas(canvas) {
     const dataUrl = canvas.toDataURL('image/png')
     const w = window.open('', '_blank')
     if (!w) return
-    w.document.write(`<!doctype html><html><head><title>Print</title>
+    w.document.write(`<!doctype html><html><head><title>${t('print.title')}</title>
     <style>
       body{ margin:0; padding:20px; font-family:"Manrope", "Segoe UI", Tahoma, sans-serif; }
       img{ max-width:100%; }
       @media print{ body{ padding:0; } }
     </style>
   </head><body>
-    <img src="${dataUrl}" alt="Test strip" />
+    <img src="${dataUrl}" alt="${t('print.alt')}" />
     <script>window.onload=()=>{window.print(); setTimeout(()=>window.close(), 200);};</script>
   </body></html>`)
     w.document.close()

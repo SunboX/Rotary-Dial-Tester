@@ -20,8 +20,8 @@ export class RotaryTester {
         this.onCycle = onCycle
         this.onWarn = onWarn
 
-    // Debounce (prel = EP-1; Delay(prel) behavior)
-        this.prellMs = 0
+        // Debounce delay in milliseconds (EP step).
+        this.debounceMs = 0
 
         this.pollIntervalMs = 1
 
@@ -35,8 +35,8 @@ export class RotaryTester {
      * @param {number} ms
      * @returns {void}
      */
-    setPrellMs(ms) {
-        this.prellMs = Math.max(0, Math.min(10, Number(ms) || 0))
+    setDebounceMs(ms) {
+        this.debounceMs = Math.max(0, Math.min(10, Number(ms) || 0))
     }
 
     /**
@@ -62,8 +62,8 @@ export class RotaryTester {
         this.nsaState = null
         this.nsrState = null
 
-        this.merk = false // PB: evaluate only once per dial
-        this.nsafehl = true // PB: 1 -> no nsa detected/connected
+        this.hasEvaluatedCycle = false // PB: evaluate only once per dial
+        this.nsaMissing = true // PB: true -> no nsa detected/connected
     }
 
     /**
@@ -74,8 +74,8 @@ export class RotaryTester {
         this.nsiTimes = []
         this.nsaTimes = []
         this.nsrTimes = []
-        this.merk = false
-        this.nsafehl = true
+        this.hasEvaluatedCycle = false
+        this.nsaMissing = true
     }
 
     /**
@@ -132,8 +132,8 @@ export class RotaryTester {
 
             // --- nsi (DCD) with debounce: read twice with EP delay in between
             const dcd1 = !!sig.dataCarrierDetect
-            if (this.prellMs > 0) {
-                await sleep(this.prellMs)
+            if (this.debounceMs > 0) {
+                await sleep(this.debounceMs)
                 const sig2 = await this.serial.getSignals()
                 const dcd2 = !!sig2.dataCarrierDetect
                 if (dcd1 === dcd2) this._handleNsi(dcd2)
@@ -165,7 +165,7 @@ export class RotaryTester {
         }
         this.nsaTimes.push(this._nowMs())
         this.nsaState = newState
-        this.nsafehl = false
+        this.nsaMissing = false
     }
 
     /**
@@ -211,19 +211,19 @@ export class RotaryTester {
         if (this.nsaTimes.length === 0 && ni > 0) {
             const dt = this._nowMs() - this.nsiTimes[ni - 1]
             if (dt > 90) {
-                if (ni < 4 || this.merk) {
+                if (ni < 4 || this.hasEvaluatedCycle) {
                     this._resetCycle()
                     return
                 }
             }
         }
 
-        // PB: if ni>2 && merk=0 && time-lastNsi>100 => evaluate
-        if (ni > 2 && !this.merk) {
+        // PB: if ni>2 && not yet evaluated && time-lastNsi>100 => evaluate
+        if (ni > 2 && !this.hasEvaluatedCycle) {
             const dt = this._nowMs() - this.nsiTimes[ni - 1]
             if (dt > 100) {
                 const cycle = this._computeCycle()
-                this.merk = true
+                this.hasEvaluatedCycle = true
                 if (cycle) this.onCycle?.(cycle)
             }
         }
@@ -258,7 +258,7 @@ export class RotaryTester {
                 // fallback: use the 1st toggle
                 nsaOpenMs = Math.max(0, Math.round(this.nsaTimes[0] - nn))
             }
-            this.nsafehl = false
+            this.nsaMissing = false
         }
 
         // nsrOnTime (diagram only)
@@ -268,21 +268,22 @@ export class RotaryTester {
             nsrOnMs = Math.max(0, Math.round(this.nsrTimes[0] - nn))
         }
 
-        // nsiof (open/off) and nsion (closed/on) as in PB:
+        // nsi open/closed totals as in PB:
         // - off: sum of "0 phases" of pulses, excluding the first
         // - on:  sum of "1 phases" between pulses (one fewer than selected)
         // Assumption: idle = 1, first toggle is 0 (opens), order: 0..1..0..1...
-        let nsiof = 0
-        for (let i = 2; i + 1 < t.length; i += 2) nsiof += t[i + 1] - t[i]
+        let nsiOpenTotalMs = 0
+        for (let i = 2; i + 1 < t.length; i += 2) nsiOpenTotalMs += t[i + 1] - t[i]
 
-        let nsion = 0
-        for (let i = 2; i < t.length; i += 2) nsion += t[i] - t[i - 1]
+        let nsiClosedTotalMs = 0
+        for (let i = 2; i < t.length; i += 2) nsiClosedTotalMs += t[i] - t[i - 1]
 
         const denomPeriods = Math.max(1, t.length / 2 - 1)
-        const avgPeriodMs = (nsiof + nsion) / denomPeriods
+        const avgPeriodMs = (nsiOpenTotalMs + nsiClosedTotalMs) / denomPeriods
         const fHz = avgPeriodMs > 0 ? 1000 / avgPeriodMs : 0
 
-        const dutyClosed = nsion + nsiof > 0 ? Math.round((nsion * 100) / (nsion + nsiof)) : 0
+        const dutyClosed =
+            nsiClosedTotalMs + nsiOpenTotalMs > 0 ? Math.round((nsiClosedTotalMs * 100) / (nsiClosedTotalMs + nsiOpenTotalMs)) : 0
 
         // Plausibility checks (as in PB)
         const warnings = []
@@ -299,7 +300,7 @@ export class RotaryTester {
             dutyClosed,
             nsaOpenMs,
             nsrOnMs,
-            prellMs: this.prellMs,
+            debounceMs: this.debounceMs,
             hasNsa: nsaOpenMs !== null,
             hasNsr: nsrOnMs !== null,
             warnings

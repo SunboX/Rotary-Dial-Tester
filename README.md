@@ -16,7 +16,7 @@ Inspiration: This project is inspired by the "NummernschalterPrüfer" app by Kla
 
 ## Hardware setup
 
-![Hardware setup](./hardware_setup.jpg)
+![Hardware setup](./pictures/hardware_setup.jpg)
 
 ## Run locally
 

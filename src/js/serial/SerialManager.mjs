@@ -1,6 +1,12 @@
 import { t } from '../i18n.mjs'
 
 /**
+ * Error code used when the Web Serial API is unavailable.
+ * @type {string}
+ */
+export const WEB_SERIAL_MISSING_CODE = 'WEB_SERIAL_MISSING'
+
+/**
  * Thin wrapper around the Web Serial API for connecting and reading signals.
  */
 export class SerialManager {
@@ -28,7 +34,10 @@ export class SerialManager {
      */
     async connect() {
         if (!('serial' in navigator)) {
-            throw new Error(t('errors.webSerialMissing'))
+            const error = new Error(t('errors.webSerialMissing'))
+            // Tag the error so the UI can attach a compatibility link.
+            error.code = WEB_SERIAL_MISSING_CODE
+            throw error
         }
         const port = await navigator.serial.requestPort()
         await port.open({

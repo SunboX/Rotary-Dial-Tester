@@ -143,6 +143,7 @@ const translations = {
         },
         errors: {
             webSerialMissing: 'WebSerial not available. Use Chrome/Edge and https:// or localhost.',
+            webSerialMissingLink: 'https://caniuse.com/web-serial',
             portNotOpen: 'Port not open.',
             portNotConnected: 'Port not connected.'
         },
@@ -292,6 +293,7 @@ const translations = {
         },
         errors: {
             webSerialMissing: 'WebSerial nicht verfügbar. Chrome/Edge und https:// oder localhost verwenden.',
+            webSerialMissingLink: 'https://caniuse.com/web-serial',
             portNotOpen: 'Port ist nicht geöffnet.',
             portNotConnected: 'Port nicht verbunden.'
         },

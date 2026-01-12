@@ -18,6 +18,10 @@ Inspiration: This project is inspired by the "NummernschalterPrüfer" app by Kla
 
 ![Hardware setup](./pictures/hardware_setup.jpg)
 
+For W48/W49 dials, use the dedicated adapter: https://github.com/SunboX/Rotary-Dial-Tester-Adapter
+It provides the correct wiring and connector mapping for these phones and matches the signal lines
+expected by the tester.
+
 ## Run locally
 
 From the project folder:

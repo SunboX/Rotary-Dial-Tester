@@ -1,4 +1,4 @@
-import { SerialManager } from './serial/SerialManager.mjs'
+import { SerialManager, WEB_SERIAL_MISSING_CODE } from './serial/SerialManager.mjs'
 import { RotaryTester } from './measurement/RotaryTester.mjs'
 import { DtmfPlayer } from './audio/DtmfPlayer.mjs'
 import { drawImpulseDiagram } from './render/impulseDiagram.mjs'
@@ -233,9 +233,10 @@ function initLocalization() {
 /**
  * Shows or hides the warning box.
  * @param {string} msg
+ * @param {{ href: string, label: string } | null} [link]
  * @returns {void}
  */
-function setWarn(msg) {
+function setWarn(msg, link = null) {
     if (!msg) {
         warnBox.hidden = true
         warnBox.textContent = ''
@@ -243,6 +244,16 @@ function setWarn(msg) {
     }
     warnBox.hidden = false
     warnBox.textContent = msg
+    if (link) {
+        // Add a safe anchor without injecting HTML into the warning text.
+        const anchor = document.createElement('a')
+        anchor.href = link.href
+        anchor.target = '_blank'
+        anchor.rel = 'noreferrer'
+        anchor.textContent = link.label
+        warnBox.append(document.createTextNode(' '))
+        warnBox.appendChild(anchor)
+    }
 }
 
 /**
@@ -396,7 +407,16 @@ btnConnect.addEventListener('click', async () => {
         updateButtons()
         await startTest()
     } catch (err) {
-        setWarn(String(err?.message || err))
+        const isWebSerialMissing = err?.code === WEB_SERIAL_MISSING_CODE
+        const message = isWebSerialMissing ? t('errors.webSerialMissing') : String(err?.message || err)
+        const link = isWebSerialMissing
+            ? {
+                  href: 'https://caniuse.com/web-serial',
+                  label: t('errors.webSerialMissingLink')
+              }
+            : null
+        // Surface WebSerial compatibility details when the API is missing.
+        setWarn(message, link)
     }
 })
 

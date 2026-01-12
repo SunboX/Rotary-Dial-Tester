@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { SerialManager } from '../src/js/serial/SerialManager.mjs'
+import { SerialManager, WEB_SERIAL_MISSING_CODE } from '../src/js/serial/SerialManager.mjs'
 
 /**
  * Creates a stub SerialPort implementation for testing.
@@ -65,3 +65,21 @@ test('connect opens the port and sets RTS', async () => {
     }
 })
 
+/**
+ * Ensures connect rejects with a tagged error when WebSerial is unavailable.
+ * @returns {Promise<void>}
+ */
+test('connect reports missing WebSerial support', async () => {
+    const originalNavigator = globalThis.navigator
+    globalThis.navigator = {}
+
+    try {
+        const manager = new SerialManager()
+        await assert.rejects(manager.connect(), (err) => {
+            assert.equal(err.code, WEB_SERIAL_MISSING_CODE)
+            return true
+        })
+    } finally {
+        globalThis.navigator = originalNavigator
+    }
+})

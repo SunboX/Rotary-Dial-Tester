@@ -130,6 +130,9 @@ body {
     gap: 14px;
     padding: 14px;
 }
+.warning-banner {
+    grid-column: 1 / -1;
+}
 
 .page-footer {
     padding: 0 14px 20px;
@@ -438,6 +441,10 @@ body {
     border: 1px dashed rgba(255, 176, 32, 0.55);
     background: rgba(255, 176, 32, 0.1);
     color: #ffe7b5;
+}
+.hint a {
+    color: inherit;
+    text-decoration: underline;
 }
 .analysis-note {
     color: var(--muted);

@@ -4,20 +4,20 @@ import { t } from '../i18n.mjs'
 /**
  * Analysis like Runtime10 (spread of runs).
  * Draws points for 10 measurements and min/max lines.
- * @param {HTMLCanvasElement} canvas
+ * @param {HTMLCanvasElement|OffscreenCanvas} canvas
  * @param {Array<object>} cycles
  * @returns {void}
  */
 export function drawRunTimeScatter(canvas, cycles) {
     const ctx = canvas.getContext('2d')
-    const W = canvas.width,
-        H = canvas.height
+    const W = canvas.width
+    const H = canvas.height
 
     ctx.clearRect(0, 0, W, H)
     ctx.fillStyle = 'rgb(177,255,255)'
     ctx.fillRect(0, 0, W, H)
 
-    // grid
+    // Draw fine and major grid lines before plotting points.
     for (let x = 0; x <= W; x += 10) {
         ctx.strokeStyle = 'rgb(250,255,255)'
         ctx.beginPath()
@@ -83,24 +83,23 @@ export function drawRunTimeScatter(canvas, cycles) {
     ctx.fillText(t('analysis.runtimeGrid'), 0, 0)
     ctx.restore()
 
-    // compute runtimes: like PB uses nsa open if available else last close (last timestamp)
-    const runtimes = cycles.slice(0, 10).map((c) => {
-        if (c.hasNsa && typeof c.nsaOpenMs === 'number') return c.nsaOpenMs
-        const t = c.nsiTimesMs
-        return t.length ? t[t.length - 1] : 0
+    // Use nsa-open runtime if available, otherwise fallback to final nsi timestamp.
+    const runtimes = cycles.slice(0, 10).map((cycle) => {
+        if (cycle.hasNsa && typeof cycle.nsaOpenMs === 'number') return cycle.nsaOpenMs
+        const nsiTimes = cycle.nsiTimesMs
+        return nsiTimes.length ? nsiTimes[nsiTimes.length - 1] : 0
     })
 
     const ref = runtimes[0] || 0
-    const ys = runtimes.map((rt) => 75 + (rt - ref))
+    const ys = runtimes.map((runtime) => 75 + (runtime - ref))
 
-    let min = Infinity,
-        max = -Infinity
-    ys.forEach((y) => {
-        min = Math.min(min, y)
-        max = Math.max(max, y)
+    let min = Infinity
+    let max = -Infinity
+    ys.forEach((value) => {
+        min = Math.min(min, value)
+        max = Math.max(max, value)
     })
 
-    // points
     for (let i = 0; i < 10; i++) {
         const x = 100 + 100 * i
         const y = clamp(ys[i], 10, 155)
@@ -110,7 +109,6 @@ export function drawRunTimeScatter(canvas, cycles) {
         ctx.fill()
     }
 
-    // min/max lines
     ctx.fillStyle = 'rgb(255,0,0)'
     ctx.strokeStyle = 'rgb(255,0,0)'
     ctx.beginPath()
@@ -132,48 +130,76 @@ export function drawRunTimeScatter(canvas, cycles) {
 }
 
 /**
- * Builds a table for pulse/pause spread (10x).
- * Returns HTML string.
+ * Computes spread-analysis rows from captured cycles.
  * @param {Array<object>} cycles
- * @returns {string}
+ * @returns {{ pulses: number, rows: Array<object> }}
  */
-export function buildImpulseSpreadTable(cycles) {
-    const c10 = cycles.slice(0, 10)
-    const pulses = c10[0]?.pulses ?? 0
-    if (!pulses || pulses < 2) return `<p class='muted'>${t('analysis.spreadNotEnough')}</p>`
+export function computeImpulseSpreadRows(cycles) {
+    const firstTenCycles = cycles.slice(0, 10)
+    const pulses = firstTenCycles[0]?.pulses ?? 0
+    if (!pulses || pulses < 2) {
+        return {
+            pulses,
+            rows: []
+        }
+    }
 
-    // Periodic analysis like PB (without the first off phase):
-    // open(off) durations: (t[3]-t[2]), (t[5]-t[4]) ...
-    // closed(on) durations: (t[2]-t[1]), (t[4]-t[3]) ...
     const rows = []
     const periods = pulses - 1
-    for (let k = 0; k < periods; k++) {
-        const openDur = []
-        const closedDur = []
-        for (const c of c10) {
-            const t = c.nsiTimesMs
-            const iOpenStart = 2 + 2 * k // 2,4,6...
-            const iOpenEnd = iOpenStart + 1
-            const iClosedStart = iOpenStart - 1 // 1,3,5...
-            if (iOpenEnd < t.length && iClosedStart >= 0) {
-                openDur.push(t[iOpenEnd] - t[iOpenStart])
-                closedDur.push(t[iOpenStart] - t[iClosedStart])
+
+    for (let periodIndex = 0; periodIndex < periods; periodIndex++) {
+        const openDurations = []
+        const closedDurations = []
+
+        for (const cycle of firstTenCycles) {
+            const nsiTimes = cycle.nsiTimesMs
+            const openStartIndex = 2 + 2 * periodIndex
+            const openEndIndex = openStartIndex + 1
+            const closedStartIndex = openStartIndex - 1
+
+            if (openEndIndex < nsiTimes.length && closedStartIndex >= 0) {
+                openDurations.push(nsiTimes[openEndIndex] - nsiTimes[openStartIndex])
+                closedDurations.push(nsiTimes[openStartIndex] - nsiTimes[closedStartIndex])
             }
         }
-        if (!openDur.length) continue
-        const oMin = Math.min(...openDur),
-            oMax = Math.max(...openDur)
-        const cMin = Math.min(...closedDur),
-            cMax = Math.max(...closedDur)
+
+        if (!openDurations.length) continue
+
+        const openMin = Math.min(...openDurations)
+        const openMax = Math.max(...openDurations)
+        const closedMin = Math.min(...closedDurations)
+        const closedMax = Math.max(...closedDurations)
+
         rows.push({
-            period: k + 1,
-            oMin,
-            oMax,
-            oDiff: oMax - oMin,
-            cMin,
-            cMax,
-            cDiff: cMax - cMin
+            period: periodIndex + 1,
+            oMin: openMin,
+            oMax: openMax,
+            oDiff: openMax - openMin,
+            cMin: closedMin,
+            cMax: closedMax,
+            cDiff: closedMax - closedMin
         })
+    }
+
+    return {
+        pulses,
+        rows
+    }
+}
+
+/**
+ * Builds spread-analysis HTML from precomputed row data.
+ * @param {{ pulses: number, rows: Array<object> }} spreadData
+ * @returns {string}
+ */
+export function buildImpulseSpreadTableFromRows(spreadData) {
+    if (!spreadData?.pulses || spreadData.pulses < 2) {
+        return `<p class='muted'>${t('analysis.spreadNotEnough')}</p>`
+    }
+
+    const rows = Array.isArray(spreadData.rows) ? spreadData.rows : []
+    if (!rows.length) {
+        return `<p class='muted'>${t('analysis.spreadNotEnough')}</p>`
     }
 
     const head = `
@@ -191,25 +217,38 @@ export function buildImpulseSpreadTable(cycles) {
   </thead>
   <tbody>
 `
+
     const body = rows
         .map(
-            (r) => `
+            (row) => `
     <tr>
-      <td>${r.period}</td>
-      <td>${r.oMin}</td>
-      <td>${r.oMax}</td>
-      <td><strong>${r.oDiff}</strong></td>
-      <td>${r.cMin}</td>
-      <td>${r.cMax}</td>
-      <td><strong>${r.cDiff}</strong></td>
+      <td>${row.period}</td>
+      <td>${row.oMin}</td>
+      <td>${row.oMax}</td>
+      <td><strong>${row.oDiff}</strong></td>
+      <td>${row.cMin}</td>
+      <td>${row.cMax}</td>
+      <td><strong>${row.cDiff}</strong></td>
     </tr>
-  `
+`
         )
         .join('')
+
     const foot = `
   </tbody>
 </table>
 <p class="muted" style="margin-top:10px">${t('analysis.spreadNote')}</p>
 `
+
     return head + body + foot
+}
+
+/**
+ * Builds a spread-analysis table directly from cycles.
+ * @param {Array<object>} cycles
+ * @returns {string}
+ */
+export function buildImpulseSpreadTable(cycles) {
+    const spreadData = computeImpulseSpreadRows(cycles)
+    return buildImpulseSpreadTableFromRows(spreadData)
 }

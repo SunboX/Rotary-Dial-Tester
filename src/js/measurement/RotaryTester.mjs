@@ -1,19 +1,17 @@
-import { sleep } from '../utils/sleep.mjs'
 import { t } from '../i18n.mjs'
+import { RotaryCycleEngine } from './RotaryCycleEngine.mjs'
+import { sleep } from '../utils/sleep.mjs'
 
 /**
- * WebSerial implementation of the core rotary-dial test logic:
- * - nsi = DCD, nsa = RI, nsr = DSR
- * - RTS is set to 1 on connect (SerialManager)
- * - Measurement runs as polling (similar to WaitWindowEvent(1) + timeGetTime_()).
+ * Main-thread adapter around RotaryCycleEngine that polls WebSerial modem signals.
  */
 export class RotaryTester {
     /**
      * @param {object} deps
-     * @param {import("../serial/SerialManager.mjs").SerialManager} deps.serial
-     * @param {(signals: object)=>void} deps.onSignals
-     * @param {(cycle: object)=>void} deps.onCycle
-     * @param {(msg: string)=>void} deps.onWarn
+     * @param {import('../serial/SerialManager.mjs').SerialManager} deps.serial
+     * @param {(signals: object) => void} deps.onSignals
+     * @param {(cycle: object) => void} deps.onCycle
+     * @param {(msg: string) => void} deps.onWarn
      */
     constructor({ serial, onSignals, onCycle, onWarn }) {
         this.serial = serial
@@ -21,81 +19,70 @@ export class RotaryTester {
         this.onCycle = onCycle
         this.onWarn = onWarn
 
-        // Debounce delay in milliseconds (EP step).
-        this.debounceMs = 0
-
+        /**
+         * Poll interval in milliseconds.
+         * @type {number}
+         */
         this.pollIntervalMs = 1
 
-        // state
+        /**
+         * Whether the async poll loop is active.
+         * @type {boolean}
+         */
         this.running = false
-        this._resetAll()
+
+        /**
+         * Shared cycle computation engine.
+         * @type {RotaryCycleEngine}
+         */
+        this.engine = new RotaryCycleEngine({ nowMs: () => this._nowMs() })
     }
 
     /**
-     * Sets the debounce time in milliseconds.
+     * Sets debounce delay in milliseconds.
      * @param {number} ms
      * @returns {void}
      */
     setDebounceMs(ms) {
-        this.debounceMs = Math.max(0, Math.min(10, Number(ms) || 0))
+        this.engine.setDebounceMs(ms)
     }
 
     /**
-     * Returns the current monotonic time in milliseconds.
+     * Returns a monotonic timestamp in milliseconds.
      * @returns {number}
      */
     _nowMs() {
-        // performance.now() is stable and high-resolution, similar to timeGetTime_()
         return performance.now()
     }
 
     /**
-     * Resets all internal tracking state.
+     * Resets all tracking state.
      * @returns {void}
      */
     _resetAll() {
-        // arrays store timestamps of state changes
-        this.nsiTimes = []
-        this.nsaTimes = []
-        this.nsrTimes = []
-
-        this.nsiState = null // boolean
-        this.nsaState = null
-        this.nsrState = null
-
-        this.hasEvaluatedCycle = false // PB: evaluate only once per dial
-        this.nsaMissing = true // PB: true -> no nsa detected/connected
+        this.engine.resetAll()
     }
 
     /**
-     * Resets the state for a single dial cycle.
+     * Resets the currently captured cycle.
      * @returns {void}
      */
     _resetCycle() {
-        this.nsiTimes = []
-        this.nsaTimes = []
-        this.nsrTimes = []
-        this.hasEvaluatedCycle = false
-        this.nsaMissing = true
+        this.engine.resetCycle()
     }
 
     /**
-     * Starts polling the serial signals and processing cycles.
+     * Starts polling serial signals.
      * @returns {Promise<void>}
      */
     async start() {
         if (this.running) return
         if (!this.serial.isOpen) throw new Error(t('errors.portNotConnected'))
 
-        // Initial status read (PB: check if nsi is open)
-        const sig = await this.serial.getSignals()
-        this.nsiState = !!sig.dataCarrierDetect // DCD
-        this.nsrState = !!sig.dataSetReady // DSR
-        this.nsaState = !!sig.ringIndicator // RI
-
-        // PB: DCD should be 1, but we keep running and wait for the first closure.
-        if (!this.nsiState) {
-            this.onWarn?.(t('warnings.nsiOpen'))
+        const signals = await this.serial.getSignals()
+        const initResult = this.engine.initializeFromSignals(signals)
+        if (initResult.warningKey) {
+            this.onWarn?.(t(initResult.warningKey))
         }
 
         this.running = true
@@ -107,7 +94,7 @@ export class RotaryTester {
     }
 
     /**
-     * Stops the polling loop.
+     * Stops polling serial signals.
      * @returns {void}
      */
     stop() {
@@ -115,196 +102,244 @@ export class RotaryTester {
     }
 
     /**
-     * Polls signals continuously while the tester is running.
+     * Polls signal lines and forwards computed cycles.
      * @returns {Promise<void>}
      */
     async _loop() {
         while (this.running) {
-            const sig = await this.serial.getSignals()
+            const signals = await this.serial.getSignals()
+            this.onSignals?.(signals)
 
-            // live status push (UI)
-            this.onSignals?.(sig)
-
-            // --- nsa (RI) without debounce (as in PB)
-            this._handleNsa(!!sig.ringIndicator)
-
-            // --- nsr (DSR) without debounce
-            this._handleNsr(!!sig.dataSetReady)
-
-            // --- nsi (DCD) with debounce: read twice with EP delay in between
-            const dcd1 = !!sig.dataCarrierDetect
+            let stableDcd = !!signals.dataCarrierDetect
             if (this.debounceMs > 0) {
                 await sleep(this.debounceMs)
-                const sig2 = await this.serial.getSignals()
-                const dcd2 = !!sig2.dataCarrierDetect
-                if (dcd1 === dcd2) this._handleNsi(dcd2)
-            } else {
-                this._handleNsi(dcd1)
+                const confirm = await this.serial.getSignals()
+                const confirmDcd = !!confirm.dataCarrierDetect
+                if (stableDcd !== confirmDcd) {
+                    await sleep(this.pollIntervalMs)
+                    continue
+                }
+                stableDcd = confirmDcd
             }
 
-            this._maybeFinalize()
+            const { cycle } = this.engine.processStableSignals({
+                dataCarrierDetect: stableDcd,
+                dataSetReady: !!signals.dataSetReady,
+                ringIndicator: !!signals.ringIndicator
+            })
+
+            if (cycle) {
+                this.onCycle?.({
+                    ...cycle,
+                    warnings: cycle.warnings.map((warningKey) => t(warningKey))
+                })
+            }
 
             await sleep(this.pollIntervalMs)
         }
     }
 
     /**
-     * Tracks changes on the nsa (RI) line.
+     * Handles one nsa signal transition.
      * @param {boolean} newState
      * @returns {void}
      */
     _handleNsa(newState) {
-        if (this.nsaState === null) {
-            this.nsaState = newState
-            return
-        }
-        if (newState === this.nsaState) return
-
-        // PB: If na==2 and another change arrives -> new dial -> reset
-        if (this.nsaTimes.length >= 2) {
-            this._resetCycle()
-        }
-        this.nsaTimes.push(this._nowMs())
-        this.nsaState = newState
-        this.nsaMissing = false
+        this.engine.processStableSignals({
+            dataCarrierDetect: this.nsiState ?? true,
+            dataSetReady: this.nsrState ?? false,
+            ringIndicator: newState
+        })
     }
 
     /**
-     * Tracks changes on the nsr (DSR) line.
+     * Handles one nsr signal transition.
      * @param {boolean} newState
      * @returns {void}
      */
     _handleNsr(newState) {
-        if (this.nsrState === null) {
-            this.nsrState = newState
-            return
-        }
-        if (newState === this.nsrState) return
-
-        this.nsrTimes.push(this._nowMs())
-        this.nsrState = newState
+        this.engine.processStableSignals({
+            dataCarrierDetect: this.nsiState ?? true,
+            dataSetReady: newState,
+            ringIndicator: this.nsaState ?? false
+        })
     }
 
     /**
-     * Tracks changes on the nsi (DCD) line.
+     * Handles one nsi signal transition.
      * @param {boolean} newState
      * @returns {void}
      */
     _handleNsi(newState) {
-        if (this.nsiState === null) {
-            this.nsiState = newState
-            return
-        }
-        if (newState === this.nsiState) return
-
-        this.nsiTimes.push(this._nowMs())
-        this.nsiState = newState
+        this.engine.processStableSignals({
+            dataCarrierDetect: newState,
+            dataSetReady: this.nsrState ?? false,
+            ringIndicator: this.nsaState ?? false
+        })
     }
 
     /**
-     * Determines whether a cycle is complete and emits results.
+     * Evaluates whether a full dial cycle can be emitted.
      * @returns {void}
      */
     _maybeFinalize() {
-        const ni = this.nsiTimes.length
+        // Finalization is triggered by processStableSignals in the shared engine.
+    }
 
-        // PB: if no nsa and last nsi >90ms, reset with too few pulses or after evaluation
-        if (this.nsaTimes.length === 0 && ni > 0) {
-            const dt = this._nowMs() - this.nsiTimes[ni - 1]
-            if (dt > 90) {
-                if (ni < 4 || this.hasEvaluatedCycle) {
-                    this._resetCycle()
-                    return
-                }
-            }
-        }
-
-        // PB: if ni>2 && not yet evaluated && time-lastNsi>100 => evaluate
-        if (ni > 2 && !this.hasEvaluatedCycle) {
-            const dt = this._nowMs() - this.nsiTimes[ni - 1]
-            if (dt > 100) {
-                const cycle = this._computeCycle()
-                this.hasEvaluatedCycle = true
-                if (cycle) this.onCycle?.(cycle)
-            }
+    /**
+     * Computes cycle metrics from captured timestamps.
+     * @returns {object|null}
+     */
+    _computeCycle() {
+        const cycle = this.engine.computeCycle()
+        if (!cycle) return null
+        return {
+            ...cycle,
+            warnings: cycle.warnings.map((warningKey) => t(warningKey))
         }
     }
 
     /**
-     * Computes the metrics for the current cycle.
-     * @returns {object|null}
+     * Returns current debounce in milliseconds.
+     * @returns {number}
      */
-    _computeCycle() {
-        // Copy and remove offset (PB: nn=nsi(0); nsi(x)-=nn)
-        const raw = [...this.nsiTimes]
-        if (raw.length < 4) return null
+    get debounceMs() {
+        return this.engine.debounceMs
+    }
 
-        const nn = raw[0]
-        const t = raw.map((v) => Math.max(0, Math.round(v - nn)))
+    /**
+     * Returns current nsi transition timestamps.
+     * @returns {Array<number>}
+     */
+    get nsiTimes() {
+        return this.engine.nsiTimes
+    }
 
-        // pulses = ni/2 (PB LEDs at 2,4,6...)
-        const pulses = Math.floor(t.length / 2)
-        const digit = pulses === 10 ? 0 : pulses
+    /**
+     * Sets nsi transition timestamps.
+     * @param {Array<number>} value
+     * @returns {void}
+     */
+    set nsiTimes(value) {
+        this.engine.nsiTimes = Array.isArray(value) ? value : []
+    }
 
-        // nsaOpenTime: PB uses nsa(1) as "nsa opens"
-        // Robust: find the timestamp when RI switches to 0 (if present)
-        let nsaOpenMs = null
-        if (this.nsaTimes.length > 0) {
-            // We do not know the state per entry, only the toggle timestamps.
-            // Assumption: RI is idle at 0, becomes 1 during dial, then returns to 0.
-            // => 2nd toggle (index 1) is "opens" (back to 0).
-            if (this.nsaTimes.length >= 2) {
-                nsaOpenMs = Math.max(0, Math.round(this.nsaTimes[1] - nn))
-            } else {
-                // fallback: use the 1st toggle
-                nsaOpenMs = Math.max(0, Math.round(this.nsaTimes[0] - nn))
-            }
-            this.nsaMissing = false
-        }
+    /**
+     * Returns current nsa transition timestamps.
+     * @returns {Array<number>}
+     */
+    get nsaTimes() {
+        return this.engine.nsaTimes
+    }
 
-        // nsrOnTime (diagram only)
-        let nsrOnMs = null
-        if (this.nsrTimes.length > 0) {
-            // PB uses nsr(1)
-            nsrOnMs = Math.max(0, Math.round(this.nsrTimes[0] - nn))
-        }
+    /**
+     * Sets nsa transition timestamps.
+     * @param {Array<number>} value
+     * @returns {void}
+     */
+    set nsaTimes(value) {
+        this.engine.nsaTimes = Array.isArray(value) ? value : []
+    }
 
-        // nsi open/closed totals as in PB:
-        // - off: sum of "0 phases" of pulses, excluding the first
-        // - on:  sum of "1 phases" between pulses (one fewer than selected)
-        // Assumption: idle = 1, first toggle is 0 (opens), order: 0..1..0..1...
-        let nsiOpenTotalMs = 0
-        for (let i = 2; i + 1 < t.length; i += 2) nsiOpenTotalMs += t[i + 1] - t[i]
+    /**
+     * Returns current nsr transition timestamps.
+     * @returns {Array<number>}
+     */
+    get nsrTimes() {
+        return this.engine.nsrTimes
+    }
 
-        let nsiClosedTotalMs = 0
-        for (let i = 2; i < t.length; i += 2) nsiClosedTotalMs += t[i] - t[i - 1]
+    /**
+     * Sets nsr transition timestamps.
+     * @param {Array<number>} value
+     * @returns {void}
+     */
+    set nsrTimes(value) {
+        this.engine.nsrTimes = Array.isArray(value) ? value : []
+    }
 
-        const denomPeriods = Math.max(1, t.length / 2 - 1)
-        const avgPeriodMs = (nsiOpenTotalMs + nsiClosedTotalMs) / denomPeriods
-        const fHz = avgPeriodMs > 0 ? 1000 / avgPeriodMs : 0
+    /**
+     * Returns current nsi level.
+     * @returns {boolean|null}
+     */
+    get nsiState() {
+        return this.engine.nsiState
+    }
 
-        const dutyClosed =
-            nsiClosedTotalMs + nsiOpenTotalMs > 0 ? Math.round((nsiClosedTotalMs * 100) / (nsiClosedTotalMs + nsiOpenTotalMs)) : 0
+    /**
+     * Sets current nsi level.
+     * @param {boolean|null} value
+     * @returns {void}
+     */
+    set nsiState(value) {
+        this.engine.nsiState = typeof value === 'boolean' ? value : value === null ? null : !!value
+    }
 
-        // Plausibility checks (as in PB)
-        const warnings = []
-        if (fHz < 7 || fHz > 13) warnings.push(t('warnings.dialSpeed'))
-        if (dutyClosed < 10 || dutyClosed > 70) warnings.push(t('warnings.pulsePauseRatio'))
+    /**
+     * Returns current nsa level.
+     * @returns {boolean|null}
+     */
+    get nsaState() {
+        return this.engine.nsaState
+    }
 
-        return {
-            createdAt: new Date(),
-            nnMs: nn,
-            nsiTimesMs: t,
-            pulses,
-            digit,
-            fHz: Math.round(fHz * 10) / 10,
-            dutyClosed,
-            nsaOpenMs,
-            nsrOnMs,
-            debounceMs: this.debounceMs,
-            hasNsa: nsaOpenMs !== null,
-            hasNsr: nsrOnMs !== null,
-            warnings
-        }
+    /**
+     * Sets current nsa level.
+     * @param {boolean|null} value
+     * @returns {void}
+     */
+    set nsaState(value) {
+        this.engine.nsaState = typeof value === 'boolean' ? value : value === null ? null : !!value
+    }
+
+    /**
+     * Returns current nsr level.
+     * @returns {boolean|null}
+     */
+    get nsrState() {
+        return this.engine.nsrState
+    }
+
+    /**
+     * Sets current nsr level.
+     * @param {boolean|null} value
+     * @returns {void}
+     */
+    set nsrState(value) {
+        this.engine.nsrState = typeof value === 'boolean' ? value : value === null ? null : !!value
+    }
+
+    /**
+     * Returns whether a cycle has already been emitted.
+     * @returns {boolean}
+     */
+    get hasEvaluatedCycle() {
+        return this.engine.hasEvaluatedCycle
+    }
+
+    /**
+     * Sets whether the current cycle has been emitted.
+     * @param {boolean} value
+     * @returns {void}
+     */
+    set hasEvaluatedCycle(value) {
+        this.engine.hasEvaluatedCycle = !!value
+    }
+
+    /**
+     * Returns whether nsa is currently missing for this cycle.
+     * @returns {boolean}
+     */
+    get nsaMissing() {
+        return this.engine.nsaMissing
+    }
+
+    /**
+     * Sets nsa missing flag.
+     * @param {boolean} value
+     * @returns {void}
+     */
+    set nsaMissing(value) {
+        this.engine.nsaMissing = !!value
     }
 }

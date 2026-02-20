@@ -144,8 +144,11 @@ const translations = {
         errors: {
             webSerialMissing: 'WebSerial not available. Use Chrome/Edge and https:// or localhost.',
             webSerialMissingLink: 'https://caniuse.com/web-serial',
+            webSerialUserActionRequired: 'User interaction required to open the serial chooser. Please connect manually once.',
             portNotOpen: 'Port not open.',
-            portNotConnected: 'Port not connected.'
+            portNotConnected: 'Port not connected.',
+            noDiagramsToExport: 'No diagrams available for export.',
+            diagramNotFound: 'The requested diagram is not available.'
         },
         print: {
             title: 'Print',
@@ -294,8 +297,11 @@ const translations = {
         errors: {
             webSerialMissing: 'WebSerial nicht verfügbar. Chrome/Edge und https:// oder localhost verwenden.',
             webSerialMissingLink: 'https://caniuse.com/web-serial',
+            webSerialUserActionRequired: 'Benutzeraktion erforderlich, um den seriellen Auswahldialog zu öffnen. Bitte einmal manuell verbinden.',
             portNotOpen: 'Port ist nicht geöffnet.',
-            portNotConnected: 'Port nicht verbunden.'
+            portNotConnected: 'Port nicht verbunden.',
+            noDiagramsToExport: 'Keine Diagramme für den Export verfügbar.',
+            diagramNotFound: 'Das angeforderte Diagramm ist nicht verfügbar.'
         },
         print: {
             title: 'Drucken',

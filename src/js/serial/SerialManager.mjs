@@ -7,6 +7,12 @@ import { t } from '../i18n.mjs'
 export const WEB_SERIAL_MISSING_CODE = 'WEB_SERIAL_MISSING'
 
 /**
+ * Error code used when a direct user interaction is required for Web Serial.
+ * @type {string}
+ */
+export const WEB_SERIAL_USER_ACTION_REQUIRED_CODE = 'WEB_SERIAL_USER_ACTION_REQUIRED'
+
+/**
  * Thin wrapper around the Web Serial API for connecting and reading signals.
  */
 export class SerialManager {
@@ -20,6 +26,7 @@ export class SerialManager {
     get isOpen() {
         return !!this.#port
     }
+
     /**
      * The current SerialPort instance, if any.
      * @returns {SerialPort|null}
@@ -33,26 +40,38 @@ export class SerialManager {
      * @returns {Promise<SerialPort>}
      */
     async connect() {
-        if (!('serial' in navigator)) {
-            const error = new Error(t('errors.webSerialMissing'))
-            // Tag the error so the UI can attach a compatibility link.
-            error.code = WEB_SERIAL_MISSING_CODE
-            throw error
-        }
+        this.#assertWebSerialAvailable()
         const port = await navigator.serial.requestPort()
-        await port.open({
-            baudRate: 300,
-            dataBits: 8,
-            stopBits: 1,
-            parity: 'none',
-            flowControl: 'none'
-        })
+        return await this.#openPort(port)
+    }
 
-        // Like the original: RTS = 1 as the "H source"
-        await port.setSignals({ requestToSend: true })
+    /**
+     * Connects to a previously granted port when possible, otherwise prompts the user.
+     * @returns {Promise<SerialPort>}
+     */
+    async connectKnownOrPrompt() {
+        this.#assertWebSerialAvailable()
 
-        this.#port = port
-        return port
+        const getPorts = navigator.serial.getPorts?.bind(navigator.serial)
+        const knownPorts = typeof getPorts === 'function' ? await getPorts() : []
+
+        for (const knownPort of knownPorts) {
+            try {
+                return await this.#openPort(knownPort)
+            } catch {}
+        }
+
+        try {
+            return await this.connect()
+        } catch (err) {
+            if (this.#isUserActivationError(err)) {
+                const error = new Error(t('errors.webSerialUserActionRequired'))
+                error.code = WEB_SERIAL_USER_ACTION_REQUIRED_CODE
+                error.cause = err
+                throw error
+            }
+            throw err
+        }
     }
 
     /**
@@ -94,5 +113,51 @@ export class SerialManager {
             }
         } catch {}
         return t('port.connected')
+    }
+
+    /**
+     * Validates that Web Serial is available in the runtime.
+     * @returns {void}
+     */
+    #assertWebSerialAvailable() {
+        if (!('serial' in navigator)) {
+            const error = new Error(t('errors.webSerialMissing'))
+            // Tag the error so the UI can attach a compatibility link.
+            error.code = WEB_SERIAL_MISSING_CODE
+            throw error
+        }
+    }
+
+    /**
+     * Opens the provided SerialPort and applies initial signal defaults.
+     * @param {SerialPort} port
+     * @returns {Promise<SerialPort>}
+     */
+    async #openPort(port) {
+        await port.open({
+            baudRate: 300,
+            dataBits: 8,
+            stopBits: 1,
+            parity: 'none',
+            flowControl: 'none'
+        })
+
+        // Keep the original logic where RTS provides the "H source".
+        await port.setSignals({ requestToSend: true })
+
+        this.#port = port
+        return port
+    }
+
+    /**
+     * Detects permission failures that usually indicate missing user activation.
+     * @param {unknown} err
+     * @returns {boolean}
+     */
+    #isUserActivationError(err) {
+        const name = String(err?.name || '')
+        const message = String(err?.message || '').toLowerCase()
+        if (name === 'SecurityError' || name === 'NotAllowedError' || name === 'InvalidStateError') return true
+        return message.includes('user gesture') || message.includes('user activation')
     }
 }

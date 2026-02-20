@@ -14,6 +14,54 @@ Inspiration: This project is inspired by the "NummernschalterPrüfer" app by Kla
 - The page must be served over `https://` or `http://localhost`
 - A serial adapter that exposes modem status lines (DCD/DSR/RI) and is wired correctly
 
+## WebMCP support
+
+This app exposes its functionality through **WebMCP** (`navigator.modelContext`) in two ways:
+
+- Imperative tools via JavaScript registration
+- Declarative tools via hidden annotated forms
+
+The app prefers the native Chrome implementation and also ships a local fallback polyfill at:
+
+- `src/vendor/webmcp-global.iife.js`
+
+### Native early-preview setup (Chrome)
+
+- Chrome version `146.0.7672.0` or newer
+- Enable: `chrome://flags/#enable-webmcp-testing`
+- Relaunch Chrome
+
+If native WebMCP is unavailable, the fallback script initializes `navigator.modelContext` automatically.
+
+### Tool inventory
+
+Imperative tool names:
+
+- `rotary_connect`
+- `rotary_disconnect`
+- `rotary_start_test`
+- `rotary_stop_test`
+- `rotary_set_debounce`
+- `rotary_set_dtmf`
+- `rotary_add_ideal_diagrams`
+- `rotary_clear_diagrams`
+- `rotary_show_analysis`
+- `rotary_export_strip`
+- `rotary_download_diagram`
+- `rotary_set_locale`
+- `rotary_open_help`
+- `rotary_close_help`
+- `rotary_get_state`
+- `rotary_get_cycles`
+- `rotary_get_analysis`
+
+Declarative equivalents use the `rotary_form_*` prefix.
+
+### Serial permission caveat
+
+`rotary_connect` first tries previously granted ports (`navigator.serial.getPorts()`), then falls back to the browser chooser.
+On first-time permission flows, the browser may still require one manual user interaction before agent calls can open the chooser.
+
 ## Hardware setup
 
 ![Hardware setup](./pictures/hardware_setup.jpg)

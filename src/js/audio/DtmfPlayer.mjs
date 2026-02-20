@@ -1,19 +1,54 @@
 import { sleep } from '../utils/sleep.mjs'
 
 /**
- * DTMF player via WebAudio (no WAV needed).
+ * Supported DTMF playback modes.
+ * @typedef {'auto'|'worklet'|'oscillator'} DtmfAudioMode
+ */
+
+/**
+ * DTMF player via WebAudio with optional AudioWorklet acceleration.
  * Mapping: 1-9, 0, *, #
  */
 export class DtmfPlayer {
     /** @type {AudioContext|null} */
     #ctx = null
 
+    /** @type {AudioWorkletNode|null} */
+    #workletNode = null
+
+    /** @type {Promise<AudioWorkletNode>|null} */
+    #workletInitPromise = null
+
+    /** @type {DtmfAudioMode} */
+    #audioMode
+
+    /** @type {boolean} */
+    #workletDisabledForSession = false
+
+    /** @type {boolean} */
+    #didLogWorkletFallback = false
+
+    /**
+     * @param {object} [options]
+     * @param {DtmfAudioMode} [options.audioMode='auto']
+     */
+    constructor(options = {}) {
+        const mode = String(options.audioMode || 'auto')
+        if (mode === 'worklet' || mode === 'oscillator' || mode === 'auto') {
+            this.#audioMode = mode
+        } else {
+            this.#audioMode = 'auto'
+        }
+    }
+
     /**
      * Lazily creates and returns the AudioContext instance.
      * @returns {AudioContext}
      */
     get ctx() {
-        if (!this.#ctx) this.#ctx = new (window.AudioContext || window.webkitAudioContext)()
+        if (!this.#ctx) {
+            this.#ctx = new (window.AudioContext || window.webkitAudioContext)()
+        }
         return this.#ctx
     }
 
@@ -25,34 +60,23 @@ export class DtmfPlayer {
      */
     async playKey(key, ms = 200) {
         const pair = dtmfFreqs(key)
-        if (!pair) return this.beep(450, ms)
+        if (!pair) {
+            await this.beep(450, ms)
+            return
+        }
 
-        const ctx = this.ctx
-        if (ctx.state === 'suspended') await ctx.resume()
+        if (await this.#shouldUseWorklet()) {
+            await this.#playViaWorklet({
+                type: 'playKey',
+                freqA: pair[0],
+                freqB: pair[1],
+                durationMs: ms,
+                gain: 0.15
+            })
+            return
+        }
 
-        const now = ctx.currentTime
-        const gain = ctx.createGain()
-        gain.gain.setValueAtTime(0.0001, now)
-        gain.gain.exponentialRampToValueAtTime(0.15, now + 0.01)
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + ms / 1000)
-
-        const o1 = ctx.createOscillator()
-        const o2 = ctx.createOscillator()
-        o1.type = 'sine'
-        o2.type = 'sine'
-        o1.frequency.setValueAtTime(pair[0], now)
-        o2.frequency.setValueAtTime(pair[1], now)
-
-        o1.connect(gain)
-        o2.connect(gain)
-        gain.connect(ctx.destination)
-
-        o1.start(now)
-        o2.start(now)
-        o1.stop(now + ms / 1000)
-        o2.stop(now + ms / 1000)
-
-        await sleep(ms)
+        await this.#playKeyOscillator(pair[0], pair[1], ms)
     }
 
     /**
@@ -62,6 +86,151 @@ export class DtmfPlayer {
      * @returns {Promise<void>}
      */
     async beep(freq = 450, ms = 200) {
+        if (await this.#shouldUseWorklet()) {
+            await this.#playViaWorklet({
+                type: 'beep',
+                freq,
+                durationMs: ms,
+                gain: 0.12
+            })
+            return
+        }
+
+        await this.#beepOscillator(freq, ms)
+    }
+
+    /**
+     * Determines whether playback should use the AudioWorklet path.
+     * @returns {Promise<boolean>}
+     */
+    async #shouldUseWorklet() {
+        if (this.#audioMode === 'oscillator') return false
+        if (this.#audioMode === 'auto' && this.#workletDisabledForSession) return false
+
+        try {
+            await this.#ensureWorkletNode()
+            return true
+        } catch (error) {
+            if (this.#audioMode === 'worklet') {
+                throw error
+            }
+
+            this.#workletDisabledForSession = true
+            if (!this.#didLogWorkletFallback) {
+                this.#didLogWorkletFallback = true
+                console.warn('DTMF AudioWorklet unavailable. Falling back to OscillatorNode playback.', error)
+            }
+            return false
+        }
+    }
+
+    /**
+     * Ensures an active worklet node exists and is connected.
+     * @returns {Promise<AudioWorkletNode>}
+     */
+    async #ensureWorkletNode() {
+        if (this.#workletNode) return this.#workletNode
+        if (this.#workletInitPromise) return await this.#workletInitPromise
+
+        this.#workletInitPromise = this.#createWorkletNode()
+
+        try {
+            this.#workletNode = await this.#workletInitPromise
+            return this.#workletNode
+        } finally {
+            this.#workletInitPromise = null
+        }
+    }
+
+    /**
+     * Creates and returns a new DTMF AudioWorklet node.
+     * @returns {Promise<AudioWorkletNode>}
+     */
+    async #createWorkletNode() {
+        const ctx = this.ctx
+        if (ctx.state === 'suspended') {
+            await ctx.resume()
+        }
+
+        if (!ctx.audioWorklet || typeof ctx.audioWorklet.addModule !== 'function') {
+            throw new Error('AudioWorklet API is not available in this browser.')
+        }
+
+        if (typeof AudioWorkletNode === 'undefined') {
+            throw new Error('AudioWorkletNode is not available in this browser.')
+        }
+
+        await ctx.audioWorklet.addModule(new URL('./DtmfWorkletProcessor.mjs', import.meta.url))
+
+        const node = new AudioWorkletNode(ctx, 'dtmf-processor', {
+            numberOfInputs: 0,
+            numberOfOutputs: 1,
+            outputChannelCount: [1]
+        })
+
+        node.connect(ctx.destination)
+        return node
+    }
+
+    /**
+     * Posts one playback command to the worklet and waits for completion.
+     * @param {object} command
+     * @param {number} [command.freqA]
+     * @param {number} [command.freqB]
+     * @param {number} [command.freq]
+     * @param {number} command.durationMs
+     * @param {number} command.gain
+     * @returns {Promise<void>}
+     */
+    async #playViaWorklet(command) {
+        const node = await this.#ensureWorkletNode()
+        node.port.postMessage(command)
+        await sleep(command.durationMs)
+    }
+
+    /**
+     * Plays a dual-tone DTMF signal with oscillator nodes.
+     * @param {number} freqA
+     * @param {number} freqB
+     * @param {number} ms
+     * @returns {Promise<void>}
+     */
+    async #playKeyOscillator(freqA, freqB, ms) {
+        const ctx = this.ctx
+        if (ctx.state === 'suspended') await ctx.resume()
+
+        const now = ctx.currentTime
+        const gain = ctx.createGain()
+        gain.gain.setValueAtTime(0.0001, now)
+        gain.gain.exponentialRampToValueAtTime(0.15, now + 0.01)
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + ms / 1000)
+
+        const oscA = ctx.createOscillator()
+        const oscB = ctx.createOscillator()
+        oscA.type = 'sine'
+        oscB.type = 'sine'
+        oscA.frequency.setValueAtTime(freqA, now)
+        oscB.frequency.setValueAtTime(freqB, now)
+
+        oscA.connect(gain)
+        oscB.connect(gain)
+        gain.connect(ctx.destination)
+
+        oscA.start(now)
+        oscB.start(now)
+        oscA.stop(now + ms / 1000)
+        oscB.stop(now + ms / 1000)
+
+        await sleep(ms)
+    }
+
+    /**
+     * Plays a single-frequency tone with oscillator nodes.
+     * @param {number} freq
+     * @param {number} ms
+     * @returns {Promise<void>}
+     */
+    async #beepOscillator(freq, ms) {
         const ctx = this.ctx
         if (ctx.state === 'suspended') await ctx.resume()
 
@@ -71,13 +240,13 @@ export class DtmfPlayer {
         gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01)
         gain.gain.exponentialRampToValueAtTime(0.0001, now + ms / 1000)
 
-        const o = ctx.createOscillator()
-        o.type = 'sine'
-        o.frequency.setValueAtTime(freq, now)
-        o.connect(gain)
+        const osc = ctx.createOscillator()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(freq, now)
+        osc.connect(gain)
         gain.connect(ctx.destination)
-        o.start(now)
-        o.stop(now + ms / 1000)
+        osc.start(now)
+        osc.stop(now + ms / 1000)
 
         await sleep(ms)
     }
@@ -103,5 +272,6 @@ function dtmfFreqs(key) {
         0: [941, 1336],
         '#': [941, 1477]
     }
+
     return map[key] || null
 }

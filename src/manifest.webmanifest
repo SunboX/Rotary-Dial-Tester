@@ -1,0 +1,22 @@
+{
+    "name": "Rotary Dial Tester",
+    "short_name": "Rotary Tester",
+    "description": "Testing and adjusting mechanical rotary dials using Web Serial and an RS-232 interface.",
+    "start_url": "/index.html",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#0b0f14",
+    "theme_color": "#0b0f14",
+    "icons": [
+        {
+            "src": "/assets/logo/rotary-dial-tester-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/logo/rotary-dial-tester.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

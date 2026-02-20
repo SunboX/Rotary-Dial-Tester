@@ -5,7 +5,7 @@ import { t } from './i18n.mjs'
  * @param {Array<HTMLCanvasElement>} diagramCanvases
  * @param {object} [options]
  * @param {number} [options.margin=20]
- * @param {string} [options.bg="white"]
+ * @param {string} [options.bg='white']
  * @returns {HTMLCanvasElement|null}
  */
 export function composeStripImage(diagramCanvases, { margin = 20, bg = 'white' } = {}) {
@@ -23,8 +23,8 @@ export function composeStripImage(diagramCanvases, { margin = 20, bg = 'white' }
     ctx.fillRect(0, 0, out.width, out.height)
 
     let y = margin
-    for (const c of canvases) {
-        ctx.drawImage(c, margin, y)
+    for (const canvas of canvases) {
+        ctx.drawImage(canvas, margin, y)
         y += h + margin
     }
     return out
@@ -34,18 +34,35 @@ export function composeStripImage(diagramCanvases, { margin = 20, bg = 'white' }
  * Triggers a download for the canvas content.
  * @param {HTMLCanvasElement} canvas
  * @param {string} filename
- * @param {string} [mime="image/png"]
+ * @param {string} [mime='image/png']
  * @param {number} [quality=0.92]
  * @returns {void}
  */
 export function downloadCanvas(canvas, filename, mime = 'image/png', quality = 0.92) {
     const url = canvas.toDataURL(mime, quality)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+}
+
+/**
+ * Triggers a download for a Blob payload.
+ * @param {Blob} blob
+ * @param {string} filename
+ * @returns {void}
+ */
+export function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
 }
 
 /**
@@ -55,17 +72,44 @@ export function downloadCanvas(canvas, filename, mime = 'image/png', quality = 0
  */
 export function printCanvas(canvas) {
     const dataUrl = canvas.toDataURL('image/png')
-    const w = window.open('', '_blank')
-    if (!w) return
-    w.document.write(`<!doctype html><html><head><title>${t('print.title')}</title>
+    printImageSource(dataUrl)
+}
+
+/**
+ * Opens a new window and prints a Blob image.
+ * @param {Blob} blob
+ * @returns {void}
+ */
+export function printBlob(blob) {
+    const url = URL.createObjectURL(blob)
+    printImageSource(url, () => {
+        URL.revokeObjectURL(url)
+    })
+}
+
+/**
+ * Writes a temporary print document using the provided image URL.
+ * @param {string} src
+ * @param {() => void} [onDone]
+ * @returns {void}
+ */
+function printImageSource(src, onDone) {
+    const win = window.open('', '_blank')
+    if (!win) {
+        onDone?.()
+        return
+    }
+
+    win.document.write(`<!doctype html><html><head><title>${t('print.title')}</title>
     <style>
       body{ margin:0; padding:20px; font-family:"Manrope", "Segoe UI", Tahoma, sans-serif; }
       img{ max-width:100%; }
       @media print{ body{ padding:0; } }
     </style>
   </head><body>
-    <img src="${dataUrl}" alt="${t('print.alt')}" />
+    <img src="${src}" alt="${t('print.alt')}" />
     <script>window.onload=()=>{window.print(); setTimeout(()=>window.close(), 200);};</script>
   </body></html>`)
-    w.document.close()
+    win.document.close()
+    onDone?.()
 }

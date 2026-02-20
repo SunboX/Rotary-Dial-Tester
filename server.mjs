@@ -21,6 +21,12 @@ server.listen(8080, function () {
 
 app.set('etag', false)
 
+app.get('/service-worker.js', (req, res, next) => {
+    // Keep the service worker script fresh to avoid stale runtime caches.
+    res.setHeader('Cache-Control', 'no-store')
+    next()
+})
+
 app.use(
     '/',
     express.static(__dirname + '/src', {

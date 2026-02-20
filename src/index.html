@@ -3,7 +3,9 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="theme-color" content="#0b0f14" />
         <title>Rotary Dial Tester (WebSerial)</title>
+        <link rel="manifest" href="./manifest.webmanifest" />
         <link rel="stylesheet" href="./style.css" />
     </head>
     <body>
@@ -270,6 +272,16 @@
             </div>
         </dialog>
 
+        <script>
+            window.__webModelContextOptions = {
+                transport: {
+                    tabServer: {
+                        allowedOrigins: ['*']
+                    }
+                }
+            }
+        </script>
+        <script src="./vendor/webmcp-global.iife.js"></script>
         <script type="module" src="./js/main.mjs"></script>
     </body>
 </html>

@@ -116,7 +116,8 @@ const translations = {
         imprint: {
             title: 'Imprint',
             responsible: 'Responsible for this website',
-            contact: 'Contact'
+            contact: 'Contact',
+            version: 'Version'
         },
         social: {
             mastodonTitle: 'Mastodon',
@@ -269,7 +270,8 @@ const translations = {
         imprint: {
             title: 'Impressum',
             responsible: 'Verantwortlich für diese Website',
-            contact: 'Kontakt'
+            contact: 'Kontakt',
+            version: 'Version'
         },
         social: {
             mastodonTitle: 'Mastodon',

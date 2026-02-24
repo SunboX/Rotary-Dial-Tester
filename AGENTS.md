@@ -38,6 +38,7 @@
 - ESM class modules use UpperCamelCase filenames: `SerialManager.mjs`, `RotaryTester.mjs`, `DtmfPlayer.mjs`.
 - Unit tests live in `test/` and run with `node --test` via `npm test`.
 - `package.json` metadata is updated for the rotary dial tester; `express` is a runtime dependency.
+- The footer displays the app version (`#appVersion`); for every bug fix or feature request, bump the project version and keep the footer version synchronized.
 - Always add JSDoc comments to all methods, including private ones, and add inline comments that clearly explain functionality.
 - Keep files below 1000 lines; split into reasonably named classes if they grow larger.
 - Always follow `.prettierrc.json` formatting.

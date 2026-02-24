@@ -363,3 +363,45 @@ test('declarative submit returns structured errors', async () => {
         globalThis.FormData = originalFormData
     }
 })
+
+/**
+ * Ensures declarative argument validation returns INVALID_ARGUMENT and skips controller execution.
+ * @returns {Promise<void>}
+ */
+test('declarative submit validates argument ranges', async () => {
+    const originalDocument = globalThis.document
+    const originalWindow = globalThis.window
+    const originalFormData = globalThis.FormData
+    const { document, window } = createMockDom()
+    const { controller, calls } = createControllerStub()
+
+    globalThis.document = document
+    globalThis.window = window
+    globalThis.FormData = MockFormData
+
+    try {
+        const registration = registerDeclarativeTools(controller)
+        const debounceForm = findFormByToolName(registration.host, 'rotary_form_set_debounce')
+        const debounceInput = collectControls(debounceForm).find((control) => control.name === 'debounceMs')
+        debounceInput.value = '99'
+
+        let responsePromise = null
+        const submitListener = debounceForm.listeners.submit[0]
+        await submitListener({
+            preventDefault() {},
+            agentInvoked: true,
+            respondWith(promise) {
+                responsePromise = promise
+            }
+        })
+
+        const response = await responsePromise
+        assert.equal(response.isError, true)
+        assert.equal(response.structuredContent.error.code, 'INVALID_ARGUMENT')
+        assert.equal(calls.length, 0)
+    } finally {
+        globalThis.document = originalDocument
+        globalThis.window = originalWindow
+        globalThis.FormData = originalFormData
+    }
+})

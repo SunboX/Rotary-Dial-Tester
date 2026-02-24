@@ -182,6 +182,7 @@ test('initWebMcp registers tools with native-like modelContext', () => {
     const originalWindow = globalThis.window
     const { document, window } = createMockDom()
     let providedTools = 0
+    let clearContextCalls = 0
 
     globalThis.document = document
     globalThis.window = window
@@ -189,6 +190,9 @@ test('initWebMcp registers tools with native-like modelContext', () => {
         modelContext: {
             provideContext(context) {
                 providedTools = context.tools.length
+            },
+            clearContext() {
+                clearContextCalls += 1
             }
         },
         modelContextTesting: {}
@@ -201,6 +205,7 @@ test('initWebMcp registers tools with native-like modelContext', () => {
         assert.equal(result.declarativeNames.length, 17)
         assert.equal(providedTools, 17)
         result.cleanup()
+        assert.equal(clearContextCalls, 1)
         assert.equal(document.getElementById('webmcpDeclarativeHost'), null)
     } finally {
         globalThis.navigator = originalNavigator
@@ -210,7 +215,7 @@ test('initWebMcp registers tools with native-like modelContext', () => {
 })
 
 /**
- * Verifies initialization succeeds in a fallback-like environment where only modelContext exists.
+ * Verifies initialization succeeds in a fallback-like environment where registerTool is available.
  * @returns {void}
  */
 test('initWebMcp registers tools with fallback-like modelContext', () => {
@@ -218,12 +223,21 @@ test('initWebMcp registers tools with fallback-like modelContext', () => {
     const originalDocument = globalThis.document
     const originalWindow = globalThis.window
     const { document, window } = createMockDom()
+    let registeredTools = 0
+    let unregisterCalls = 0
 
     globalThis.document = document
     globalThis.window = window
     globalThis.navigator = {
         modelContext: {
-            provideContext() {}
+            registerTool() {
+                registeredTools += 1
+                return {
+                    unregister() {
+                        unregisterCalls += 1
+                    }
+                }
+            }
         }
     }
 
@@ -232,6 +246,10 @@ test('initWebMcp registers tools with fallback-like modelContext', () => {
         assert.equal(result.enabled, true)
         assert.equal(result.imperativeNames.length, 17)
         assert.equal(result.declarativeNames.length, 17)
+        assert.equal(registeredTools, 17)
+
+        result.cleanup()
+        assert.equal(unregisterCalls, 17)
     } finally {
         globalThis.navigator = originalNavigator
         globalThis.document = originalDocument

@@ -117,6 +117,9 @@ test('registerImperativeTools publishes the full tool inventory', () => {
         assert.deepEqual(debounceTool.inputSchema.required, ['debounceMs'])
         assert.equal(debounceTool.inputSchema.properties.debounceMs.minimum, 0)
         assert.equal(debounceTool.inputSchema.properties.debounceMs.maximum, 10)
+
+        const getStateTool = contexts[0].tools.find((tool) => tool.name === 'rotary_get_state')
+        assert.equal(getStateTool.annotations.readOnlyHint, true)
     } finally {
         globalThis.navigator = originalNavigator
     }
@@ -183,6 +186,78 @@ test('imperative tool execute returns structured errors', async () => {
         assert.equal(response.structuredContent.ok, false)
         assert.equal(response.structuredContent.error.code, 'UNKNOWN_ERROR')
         assert.match(response.structuredContent.error.message, /Export failed/)
+    } finally {
+        globalThis.navigator = originalNavigator
+    }
+})
+
+/**
+ * Ensures imperative registration works with registerTool-only runtimes and unregisters on cleanup.
+ * @returns {void}
+ */
+test('registerImperativeTools falls back to registerTool and cleans up', () => {
+    const originalNavigator = globalThis.navigator
+    /** @type {Array<object>} */
+    const registeredTools = []
+    /** @type {Array<string>} */
+    const unregisteredNames = []
+
+    globalThis.navigator = {
+        modelContext: {
+            registerTool(tool) {
+                registeredTools.push(tool)
+                return {
+                    unregister() {
+                        unregisteredNames.push(tool.name)
+                    }
+                }
+            }
+        }
+    }
+
+    try {
+        const { controller } = createControllerStub()
+        const result = registerImperativeTools(controller)
+
+        assert.equal(result.names.length, 17)
+        assert.equal(registeredTools.length, 17)
+
+        result.cleanup()
+        assert.equal(unregisteredNames.length, 17)
+        assert.ok(unregisteredNames.includes('rotary_connect'))
+        assert.ok(unregisteredNames.includes('rotary_get_analysis'))
+    } finally {
+        globalThis.navigator = originalNavigator
+    }
+})
+
+/**
+ * Ensures invalid arguments are rejected with machine-readable INVALID_ARGUMENT responses.
+ * @returns {Promise<void>}
+ */
+test('imperative tool execute validates arguments strictly', async () => {
+    const originalNavigator = globalThis.navigator
+    /** @type {Array<object>} */
+    const contexts = []
+    globalThis.navigator = {
+        modelContext: {
+            provideContext(context) {
+                contexts.push(context)
+            }
+        }
+    }
+
+    try {
+        const { controller } = createControllerStub()
+        registerImperativeTools(controller)
+
+        const debounceTool = contexts[0].tools.find((tool) => tool.name === 'rotary_set_debounce')
+        const response = await debounceTool.execute({ debounceMs: 99 })
+
+        assert.equal(response.isError, true)
+        assert.equal(response.structuredContent.ok, false)
+        assert.equal(response.structuredContent.error.code, 'INVALID_ARGUMENT')
+        assert.match(response.structuredContent.error.message, /debounceMs must be <= 10/)
     } finally {
         globalThis.navigator = originalNavigator
     }

@@ -28,10 +28,13 @@ export function initWebMcp({ controller, logger = console }) {
 
     let imperativeNames = []
     let declarativeNames = []
+    let cleanupImperative = () => {}
     let cleanupDeclarative = () => {}
 
     try {
-        imperativeNames = registerImperativeTools(controller).names
+        const imperative = registerImperativeTools(controller)
+        imperativeNames = imperative.names
+        cleanupImperative = imperative.cleanup
     } catch (err) {
         logger.error('[WebMCP] Failed to register imperative tools.', err)
     }
@@ -58,6 +61,7 @@ export function initWebMcp({ controller, logger = console }) {
         imperativeNames,
         declarativeNames,
         cleanup() {
+            cleanupImperative()
             cleanupDeclarative()
         }
     }

@@ -1,6 +1,9 @@
 import { createToolFailure, createToolSuccess } from './toolResponse.mjs'
+import { readBooleanArg, readEnumArg, readNumberArg, readStringArg } from './toolArgs.mjs'
 
 const DECLARATIVE_HOST_ID = 'webmcpDeclarativeHost'
+const ANALYSIS_MODES = ['runtime', 'spread']
+const EXPORT_FORMATS = ['png', 'jpg', 'print']
 
 /**
  * Registers declarative WebMCP tools by creating hidden annotated forms.
@@ -97,7 +100,11 @@ function buildDeclarativeDefinitions(controller) {
                 }
             ],
             run: async (args) => {
-                const state = await controller.connectCom({ preferKnown: args.preferKnown === true })
+                const preferKnown = readBooleanArg(args.preferKnown, {
+                    name: 'preferKnown',
+                    defaultValue: true
+                })
+                const state = await controller.connectCom({ preferKnown })
                 return createToolSuccess('Connected and started.', { state })
             }
         },
@@ -134,7 +141,16 @@ function buildDeclarativeDefinitions(controller) {
                     max: 10
                 }
             ],
-            run: async (args) => createToolSuccess('Debounce updated.', { state: controller.setDebounce(args.debounceMs) })
+            run: async (args) => {
+                const debounceMs = readNumberArg(args.debounceMs, {
+                    name: 'debounceMs',
+                    required: true,
+                    min: 0,
+                    max: 10,
+                    integer: true
+                })
+                return createToolSuccess('Debounce updated.', { state: controller.setDebounce(debounceMs) })
+            }
         },
         {
             name: 'rotary_form_set_dtmf',
@@ -153,7 +169,13 @@ function buildDeclarativeDefinitions(controller) {
                     defaultValue: 'true'
                 }
             ],
-            run: async (args) => createToolSuccess('DTMF updated.', { state: controller.setDtmfEnabled(args.enabled === true) })
+            run: async (args) => {
+                const enabled = readBooleanArg(args.enabled, {
+                    name: 'enabled',
+                    required: true
+                })
+                return createToolSuccess('DTMF updated.', { state: controller.setDtmfEnabled(enabled) })
+            }
         },
         {
             name: 'rotary_form_add_ideal_diagrams',
@@ -170,7 +192,16 @@ function buildDeclarativeDefinitions(controller) {
                     max: 10
                 }
             ],
-            run: async (args) => createToolSuccess('Ideal diagrams added.', { state: controller.addIdealDiagrams(args.count) })
+            run: async (args) => {
+                const count = readNumberArg(args.count, {
+                    name: 'count',
+                    required: true,
+                    min: 1,
+                    max: 10,
+                    integer: true
+                })
+                return createToolSuccess('Ideal diagrams added.', { state: controller.addIdealDiagrams(count) })
+            }
         },
         {
             name: 'rotary_form_clear_diagrams',
@@ -195,7 +226,14 @@ function buildDeclarativeDefinitions(controller) {
                     defaultValue: 'runtime'
                 }
             ],
-            run: async (args) => createToolSuccess('Analysis view updated.', { state: controller.showAnalysis(args.mode) })
+            run: async (args) => {
+                const mode = readEnumArg(args.mode, {
+                    name: 'mode',
+                    values: ANALYSIS_MODES,
+                    required: true
+                })
+                return createToolSuccess('Analysis view updated.', { state: controller.showAnalysis(mode) })
+            }
         },
         {
             name: 'rotary_form_export_strip',
@@ -215,7 +253,14 @@ function buildDeclarativeDefinitions(controller) {
                     defaultValue: 'png'
                 }
             ],
-            run: async (args) => createToolSuccess('Strip exported.', { export: await controller.exportStrip(args.format) })
+            run: async (args) => {
+                const format = readEnumArg(args.format, {
+                    name: 'format',
+                    values: EXPORT_FORMATS,
+                    required: true
+                })
+                return createToolSuccess('Strip exported.', { export: await controller.exportStrip(format) })
+            }
         },
         {
             name: 'rotary_form_download_diagram',
@@ -231,8 +276,15 @@ function buildDeclarativeDefinitions(controller) {
                     min: 0
                 }
             ],
-            run: async (args) =>
-                createToolSuccess('Diagram downloaded.', { download: await controller.downloadDiagram(args.index) })
+            run: async (args) => {
+                const index = readNumberArg(args.index, {
+                    name: 'index',
+                    required: true,
+                    min: 0,
+                    integer: true
+                })
+                return createToolSuccess('Diagram downloaded.', { download: await controller.downloadDiagram(index) })
+            }
         },
         {
             name: 'rotary_form_set_locale',
@@ -247,7 +299,13 @@ function buildDeclarativeDefinitions(controller) {
                     defaultValue: 'en'
                 }
             ],
-            run: async (args) => createToolSuccess('Locale updated.', { state: controller.setLocale(args.locale) })
+            run: async (args) => {
+                const locale = readStringArg(args.locale, {
+                    name: 'locale',
+                    required: true
+                })
+                return createToolSuccess('Locale updated.', { state: controller.setLocale(locale) })
+            }
         },
         {
             name: 'rotary_form_open_help',

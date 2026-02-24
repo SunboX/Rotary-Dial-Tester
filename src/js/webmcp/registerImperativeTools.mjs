@@ -1,18 +1,83 @@
 import { createToolFailure, createToolSuccess } from './toolResponse.mjs'
+import {
+    assertAllowedKeys,
+    readBooleanArg,
+    readEnumArg,
+    readNumberArg,
+    readStringArg,
+    requireToolInputObject
+} from './toolArgs.mjs'
+
+const ANALYSIS_MODES = ['runtime', 'spread']
+const EXPORT_FORMATS = ['png', 'jpg', 'print']
 
 /**
- * Registers imperative WebMCP tools through navigator.modelContext.provideContext().
+ * Registers imperative WebMCP tools through provideContext() or registerTool().
  * @param {import('../app/AppController.mjs').AppController} controller
- * @returns {{ names: string[] }}
+ * @returns {{ names: string[], cleanup: () => void }}
  */
 export function registerImperativeTools(controller) {
-    if (!navigator?.modelContext?.provideContext) {
-        return { names: [] }
+    if (!navigator?.modelContext) {
+        return {
+            names: [],
+            cleanup() {}
+        }
     }
 
+    const modelContext = navigator.modelContext
     const tools = buildTools(controller)
-    navigator.modelContext.provideContext({ tools })
-    return { names: tools.map((tool) => tool.name) }
+    const toolNames = tools.map((tool) => tool.name)
+
+    if (typeof modelContext.provideContext === 'function') {
+        modelContext.provideContext({ tools })
+        return {
+            names: toolNames,
+            cleanup() {
+                if (typeof modelContext.clearContext === 'function') {
+                    modelContext.clearContext()
+                }
+            }
+        }
+    }
+
+    if (typeof modelContext.registerTool === 'function') {
+        const unregisterCallbacks = []
+
+        try {
+            for (const tool of tools) {
+                const registration = modelContext.registerTool(tool)
+                if (registration && typeof registration.unregister === 'function') {
+                    unregisterCallbacks.push(() => registration.unregister())
+                    continue
+                }
+
+                if (typeof modelContext.unregisterTool === 'function') {
+                    unregisterCallbacks.push(() => modelContext.unregisterTool(tool.name))
+                }
+            }
+        } catch (error) {
+            // Roll back earlier tool registrations to avoid partial tool state.
+            for (let index = unregisterCallbacks.length - 1; index >= 0; index -= 1) {
+                unregisterCallbacks[index]()
+            }
+            throw error
+        }
+
+        return {
+            names: toolNames,
+            cleanup() {
+                // Unregister in reverse order so dependencies are removed last.
+                for (let index = unregisterCallbacks.length - 1; index >= 0; index -= 1) {
+                    unregisterCallbacks[index]()
+                }
+            }
+        }
+    }
+
+    return {
+        names: [],
+        cleanup() {}
+    }
 }
 
 /**
@@ -35,8 +100,13 @@ function buildTools(controller) {
                 },
                 additionalProperties: false
             },
-            execute: async ({ preferKnown = true } = {}) =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    const args = parseToolArgs(input, 'rotary_connect', ['preferKnown'])
+                    const preferKnown = readBooleanArg(args.preferKnown, {
+                        name: 'preferKnown',
+                        defaultValue: true
+                    })
                     const state = await controller.connectCom({ preferKnown: !!preferKnown })
                     return createToolSuccess('Connected and started.', { state })
                 })
@@ -45,8 +115,9 @@ function buildTools(controller) {
             name: 'rotary_disconnect',
             description: 'Disconnect from the current serial device and stop testing.',
             inputSchema: emptyObjectSchema(),
-            execute: async () =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    parseToolArgs(input, 'rotary_disconnect', [])
                     const state = await controller.disconnectCom()
                     return createToolSuccess('Disconnected.', { state })
                 })
@@ -55,8 +126,9 @@ function buildTools(controller) {
             name: 'rotary_start_test',
             description: 'Start rotary dial measurement on the connected device.',
             inputSchema: emptyObjectSchema(),
-            execute: async () =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    parseToolArgs(input, 'rotary_start_test', [])
                     const state = await controller.startTest()
                     return createToolSuccess('Measurement started.', { state })
                 })
@@ -65,8 +137,9 @@ function buildTools(controller) {
             name: 'rotary_stop_test',
             description: 'Stop rotary dial measurement.',
             inputSchema: emptyObjectSchema(),
-            execute: async () =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    parseToolArgs(input, 'rotary_stop_test', [])
                     const state = controller.stopTest()
                     return createToolSuccess('Measurement stopped.', { state })
                 })
@@ -87,9 +160,17 @@ function buildTools(controller) {
                 required: ['debounceMs'],
                 additionalProperties: false
             },
-            execute: async ({ debounceMs } = {}) =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
-                    const state = controller.setDebounce(Number(debounceMs))
+                    const args = parseToolArgs(input, 'rotary_set_debounce', ['debounceMs'])
+                    const debounceMs = readNumberArg(args.debounceMs, {
+                        name: 'debounceMs',
+                        required: true,
+                        min: 0,
+                        max: 10,
+                        integer: true
+                    })
+                    const state = controller.setDebounce(debounceMs)
                     return createToolSuccess('Debounce updated.', { state })
                 })
         },
@@ -107,9 +188,14 @@ function buildTools(controller) {
                 required: ['enabled'],
                 additionalProperties: false
             },
-            execute: async ({ enabled } = {}) =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
-                    const state = controller.setDtmfEnabled(!!enabled)
+                    const args = parseToolArgs(input, 'rotary_set_dtmf', ['enabled'])
+                    const enabled = readBooleanArg(args.enabled, {
+                        name: 'enabled',
+                        required: true
+                    })
+                    const state = controller.setDtmfEnabled(enabled)
                     return createToolSuccess('DTMF setting updated.', { state })
                 })
         },
@@ -128,9 +214,17 @@ function buildTools(controller) {
                 },
                 additionalProperties: false
             },
-            execute: async ({ count = 10 } = {}) =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
-                    const state = controller.addIdealDiagrams(Number(count))
+                    const args = parseToolArgs(input, 'rotary_add_ideal_diagrams', ['count'])
+                    const count = readNumberArg(args.count, {
+                        name: 'count',
+                        defaultValue: 10,
+                        min: 1,
+                        max: 10,
+                        integer: true
+                    })
+                    const state = controller.addIdealDiagrams(count)
                     return createToolSuccess('Ideal diagrams added.', { state })
                 })
         },
@@ -138,8 +232,9 @@ function buildTools(controller) {
             name: 'rotary_clear_diagrams',
             description: 'Clear all diagrams and reset displayed measurements.',
             inputSchema: emptyObjectSchema(),
-            execute: async () =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    parseToolArgs(input, 'rotary_clear_diagrams', [])
                     const state = controller.clearDiagrams()
                     return createToolSuccess('Diagrams cleared.', { state })
                 })
@@ -159,8 +254,14 @@ function buildTools(controller) {
                 required: ['mode'],
                 additionalProperties: false
             },
-            execute: async ({ mode } = {}) =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    const args = parseToolArgs(input, 'rotary_show_analysis', ['mode'])
+                    const mode = readEnumArg(args.mode, {
+                        name: 'mode',
+                        values: ANALYSIS_MODES,
+                        required: true
+                    })
                     const state = controller.showAnalysis(mode)
                     return createToolSuccess('Analysis view updated.', { state })
                 })
@@ -180,8 +281,14 @@ function buildTools(controller) {
                 required: ['format'],
                 additionalProperties: false
             },
-            execute: async ({ format } = {}) =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    const args = parseToolArgs(input, 'rotary_export_strip', ['format'])
+                    const format = readEnumArg(args.format, {
+                        name: 'format',
+                        values: EXPORT_FORMATS,
+                        required: true
+                    })
                     const exportResult = await controller.exportStrip(format)
                     return createToolSuccess('Strip export completed.', { export: exportResult })
                 })
@@ -201,9 +308,16 @@ function buildTools(controller) {
                 required: ['index'],
                 additionalProperties: false
             },
-            execute: async ({ index } = {}) =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
-                    const result = await controller.downloadDiagram(Number(index))
+                    const args = parseToolArgs(input, 'rotary_download_diagram', ['index'])
+                    const index = readNumberArg(args.index, {
+                        name: 'index',
+                        required: true,
+                        min: 0,
+                        integer: true
+                    })
+                    const result = await controller.downloadDiagram(index)
                     return createToolSuccess('Diagram downloaded.', { download: result })
                 })
         },
@@ -221,9 +335,14 @@ function buildTools(controller) {
                 required: ['locale'],
                 additionalProperties: false
             },
-            execute: async ({ locale } = {}) =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
-                    const state = controller.setLocale(String(locale || 'en'))
+                    const args = parseToolArgs(input, 'rotary_set_locale', ['locale'])
+                    const locale = readStringArg(args.locale, {
+                        name: 'locale',
+                        required: true
+                    })
+                    const state = controller.setLocale(locale)
                     return createToolSuccess('Locale updated.', { state })
                 })
         },
@@ -231,8 +350,9 @@ function buildTools(controller) {
             name: 'rotary_open_help',
             description: 'Open the help dialog.',
             inputSchema: emptyObjectSchema(),
-            execute: async () =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    parseToolArgs(input, 'rotary_open_help', [])
                     const state = controller.openHelp()
                     return createToolSuccess('Help opened.', { state })
                 })
@@ -241,8 +361,9 @@ function buildTools(controller) {
             name: 'rotary_close_help',
             description: 'Close the help dialog.',
             inputSchema: emptyObjectSchema(),
-            execute: async () =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    parseToolArgs(input, 'rotary_close_help', [])
                     const state = controller.closeHelp()
                     return createToolSuccess('Help closed.', { state })
                 })
@@ -250,9 +371,13 @@ function buildTools(controller) {
         {
             name: 'rotary_get_state',
             description: 'Get current runtime/UI state.',
+            annotations: {
+                readOnlyHint: true
+            },
             inputSchema: emptyObjectSchema(),
-            execute: async () =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    parseToolArgs(input, 'rotary_get_state', [])
                     const state = controller.getState()
                     return createToolSuccess('State snapshot returned.', { state })
                 })
@@ -260,9 +385,13 @@ function buildTools(controller) {
         {
             name: 'rotary_get_cycles',
             description: 'Get captured measurement cycles.',
+            annotations: {
+                readOnlyHint: true
+            },
             inputSchema: emptyObjectSchema(),
-            execute: async () =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    parseToolArgs(input, 'rotary_get_cycles', [])
                     const cycles = controller.getCycles()
                     return createToolSuccess('Cycles returned.', { cycles })
                 })
@@ -270,9 +399,13 @@ function buildTools(controller) {
         {
             name: 'rotary_get_analysis',
             description: 'Get analysis readiness and summary data.',
+            annotations: {
+                readOnlyHint: true
+            },
             inputSchema: emptyObjectSchema(),
-            execute: async () =>
+            execute: async (input = {}) =>
                 await executeTool(async () => {
+                    parseToolArgs(input, 'rotary_get_analysis', [])
                     const analysis = controller.getAnalysisSnapshot()
                     return createToolSuccess('Analysis snapshot returned.', { analysis })
                 })
@@ -291,6 +424,19 @@ async function executeTool(run) {
     } catch (err) {
         return createToolFailure(err)
     }
+}
+
+/**
+ * Normalizes and validates generic tool argument objects.
+ * @param {unknown} input
+ * @param {string} toolName
+ * @param {Array<string>} allowedKeys
+ * @returns {Record<string, unknown>}
+ */
+function parseToolArgs(input, toolName, allowedKeys) {
+    const args = requireToolInputObject(input, toolName)
+    assertAllowedKeys(args, toolName, allowedKeys)
+    return args
 }
 
 /**

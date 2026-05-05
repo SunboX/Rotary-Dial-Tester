@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 const CACHE_VERSION = 'rotary-dial-tester-v1'
 const SHELL_CACHE = `${CACHE_VERSION}-shell`
 const STATIC_CACHE = `${CACHE_VERSION}-static`

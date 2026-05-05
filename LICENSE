@@ -1,20 +1,14 @@
-Permission Required License
+SPDX-FileCopyrightText: 2026 André Fiedler
+SPDX-License-Identifier: GPL-3.0-or-later
 
-Copyright (c) 2026 André Fiedler. All rights reserved.
+# License
 
-Permission is required for any use. You may not use, copy, modify, distribute, or
-create derivative works of this project without prior written permission from
-the copyright holder.
+This repository uses REUSE-style licensing metadata.
 
-If permission is granted, you must provide attribution in any copies,
-distributions, or derivative works. Attribution must include the project name
-"Rotary Dial Tester", this copyright notice, and a statement that the work is
-used with permission.
+Original software in this repository is licensed under the GNU General Public License v3.0 or later (`GPL-3.0-or-later`). The full license text is available in `LICENSES/GPL-3.0-or-later.txt`.
 
-THIS PROJECT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE PROJECT OR THE USE OR OTHER DEALINGS IN THE
-PROJECT.
+Documentation, images, and other non-code media are licensed under Creative Commons Attribution-ShareAlike 4.0 (`CC-BY-SA-4.0`) unless otherwise marked.
+
+Bundled third-party files keep their own license notices, including the Manrope font under `OFL-1.1`, the WebMCP fallback bundle under `MIT`, and the Google Web Serial codelab-derived file under `Apache-2.0` plus project modifications under `GPL-3.0-or-later`.
+
+Closed-source, proprietary, or otherwise GPL-incompatible use requires a separate commercial/proprietary license from the copyright holder. See `COMMERCIAL-LICENSE.md`.

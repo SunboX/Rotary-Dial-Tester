@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import process from 'node:process'
 import express from 'express'
 import { createServer } from 'http'

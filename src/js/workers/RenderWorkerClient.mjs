@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import { createWorkerRequest, DEFAULT_REQUEST_TIMEOUT_MS, RENDER_INBOUND, RENDER_OUTBOUND } from './WorkerProtocol.mjs'
 
 /**

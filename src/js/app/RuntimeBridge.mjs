@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import { RotaryTester } from '../measurement/RotaryTester.mjs'
 import { drawRunTimeScatter } from '../render/analysis.mjs'
 import { drawImpulseDiagram } from '../render/impulseDiagram.mjs'

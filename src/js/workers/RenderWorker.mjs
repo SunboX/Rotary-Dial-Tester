@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import { setLocale } from '../i18n.mjs'
 import { computeImpulseSpreadRows, drawRunTimeScatter } from '../render/analysis.mjs'
 import { drawImpulseDiagram } from '../render/impulseDiagram.mjs'

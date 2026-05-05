@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019 Google Inc.
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-or-later
+
 /*
  * @license
  * Getting Started with Web Serial Codelab (https://todo)

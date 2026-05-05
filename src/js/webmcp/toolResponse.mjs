@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import { WEB_SERIAL_MISSING_CODE, WEB_SERIAL_USER_ACTION_REQUIRED_CODE } from '../serial/SerialManager.mjs'
 
 /**

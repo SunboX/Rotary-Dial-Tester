@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import { createWorkerError, createWorkerResponse, EXPORT_INBOUND, EXPORT_OUTBOUND } from './WorkerProtocol.mjs'
 
 /**

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import { t } from '../i18n.mjs'
 import { RotaryCycleEngine } from './RotaryCycleEngine.mjs'
 import { sleep } from '../utils/sleep.mjs'

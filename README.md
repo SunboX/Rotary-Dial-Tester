@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 André Fiedler
+SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 # Rotary Dial Tester (WebSerial)
 
 This app implements a rotary dial tester as a web app using **navigator.serial** (Web Serial API)
@@ -112,3 +117,27 @@ When 10 measurements in a row with the same digit are captured, two analyses are
 
 Note: The WebSerial API does not allow automatic COM port detection, so the port must be
 selected in the browser dialog.
+
+## License
+
+This project is available under two licensing options:
+
+### 1. Open-source license
+
+GNU General Public License v3.0 or later (`GPL-3.0-or-later`).
+
+You may use, modify, and distribute this project under the GPL. If you distribute modified versions or larger works based on this project, they must comply with the GPL, including source-code availability requirements.
+
+Documentation, images, and other non-code media are licensed under Creative Commons Attribution-ShareAlike 4.0 (`CC-BY-SA-4.0`) unless otherwise marked. Bundled third-party files keep their own license notices, including the Manrope font under `OFL-1.1`, the WebMCP fallback bundle under `MIT`, and the Google Web Serial codelab-derived file under `Apache-2.0` plus project modifications under `GPL-3.0-or-later`.
+
+### 2. Commercial/proprietary license
+
+For use in closed-source, proprietary, or otherwise GPL-incompatible products, a separate commercial license is required.
+
+Commercial licensing contact: **mail@andrefiedler.de**
+
+### Attribution / notices
+
+Copyright (C) 2026 André Fiedler.
+
+Copyright, license, attribution, and source-origin notices must be preserved as required by the GPL and the notice files in this repository. See `NOTICE.md` and `COMMERCIAL-LICENSE.md` for details.

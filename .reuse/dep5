@@ -1,0 +1,31 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Rotary Dial Tester
+Upstream-Contact: André Fiedler <mail@andrefiedler.de>
+Source: https://github.com/SunboX/Rotary-Dial-Tester
+
+Files: .gitignore
+       .github/workflows/deploy-ftp.yml
+       .prettierrc.json
+       .vscode/settings.json
+       AGENTS.md
+       package.json
+       package-lock.json
+       src/manifest.webmanifest
+Copyright: 2026 André Fiedler
+License: GPL-3.0-or-later
+
+Files: pictures/*
+       src/assets/logo/*.png
+       src/assets/logo/*.svg
+       src/favicon.ico
+Copyright: 2026 André Fiedler
+License: CC-BY-SA-4.0
+
+Files: src/assets/fonts/Manrope-Variable.woff2
+       src/assets/fonts/OFL.txt
+Copyright: 2018 The Manrope Project Authors (https://github.com/sharanda/manrope)
+License: OFL-1.1
+
+Files: src/vendor/webmcp-global.iife.js
+Copyright: 2026 WebMCP-org contributors
+License: MIT

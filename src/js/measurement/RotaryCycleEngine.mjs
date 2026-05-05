@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /**
  * Warning keys produced by the measurement engine.
  * @type {{ NSI_OPEN: string, DIAL_SPEED: string, PULSE_PAUSE_RATIO: string }}

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 André Fiedler
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /**
  * Registers the app service worker when secure-context requirements are met.
  * @returns {Promise<{ registered: boolean, scope?: string }>}

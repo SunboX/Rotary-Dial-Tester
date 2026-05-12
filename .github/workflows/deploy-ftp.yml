@@ -16,6 +16,10 @@ concurrency:
 jobs:
     deploy:
         runs-on: ubuntu-latest
+        env:
+            FTP_SERVER: ${{ secrets.FTP_SERVER }}
+            FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+            FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -34,15 +38,31 @@ jobs:
                       docs:
                         - 'docs/**'
 
+            - name: Report skipped FTP deployment
+              if: >-
+                  (steps.changes.outputs.src == 'true' ||
+                  steps.changes.outputs.deps == 'true' ||
+                  steps.changes.outputs.api == 'true' ||
+                  steps.changes.outputs.docs == 'true') &&
+                  (env.FTP_SERVER == '' ||
+                  env.FTP_USERNAME == '' ||
+                  env.FTP_PASSWORD == '')
+              run: |
+                  echo "::warning::FTP deployment skipped because FTP_SERVER, FTP_USERNAME, or FTP_PASSWORD is not configured in repository secrets."
+
             # 1) Deploy src -> /
             # Deploy src always (or only if src changed)
             - name: Deploy src to /
-              if: steps.changes.outputs.src == 'true' || steps.changes.outputs.deps == 'true'
+              if: >-
+                  env.FTP_SERVER != '' &&
+                  env.FTP_USERNAME != '' &&
+                  env.FTP_PASSWORD != '' &&
+                  (steps.changes.outputs.src == 'true' || steps.changes.outputs.deps == 'true')
               uses: SamKirkland/FTP-Deploy-Action@v4.3.5
               with:
-                  server: ${{ secrets.FTP_SERVER }}
-                  username: ${{ secrets.FTP_USERNAME }}
-                  password: ${{ secrets.FTP_PASSWORD }}
+                  server: ${{ env.FTP_SERVER }}
+                  username: ${{ env.FTP_USERNAME }}
+                  password: ${{ env.FTP_PASSWORD }}
                   protocol: ftp
                   local-dir: ./src/
                   server-dir: /
@@ -56,12 +76,16 @@ jobs:
 
             # 2) Deploy PHP backend -> /api/
             - name: Deploy api to /api/
-              if: steps.changes.outputs.api == 'true'
+              if: >-
+                  env.FTP_SERVER != '' &&
+                  env.FTP_USERNAME != '' &&
+                  env.FTP_PASSWORD != '' &&
+                  steps.changes.outputs.api == 'true'
               uses: SamKirkland/FTP-Deploy-Action@v4.3.5
               with:
-                  server: ${{ secrets.FTP_SERVER }}
-                  username: ${{ secrets.FTP_USERNAME }}
-                  password: ${{ secrets.FTP_PASSWORD }}
+                  server: ${{ env.FTP_SERVER }}
+                  username: ${{ env.FTP_USERNAME }}
+                  password: ${{ env.FTP_PASSWORD }}
                   protocol: ftp
                   local-dir: ./api/
                   server-dir: /api/
@@ -75,12 +99,16 @@ jobs:
 
             # 3) Deploy docs -> /docs/ (used for AI grounding when AI_DOCS_DIR=docs)
             - name: Deploy docs to /docs/
-              if: steps.changes.outputs.docs == 'true'
+              if: >-
+                  env.FTP_SERVER != '' &&
+                  env.FTP_USERNAME != '' &&
+                  env.FTP_PASSWORD != '' &&
+                  steps.changes.outputs.docs == 'true'
               uses: SamKirkland/FTP-Deploy-Action@v4.3.5
               with:
-                  server: ${{ secrets.FTP_SERVER }}
-                  username: ${{ secrets.FTP_USERNAME }}
-                  password: ${{ secrets.FTP_PASSWORD }}
+                  server: ${{ env.FTP_SERVER }}
+                  username: ${{ env.FTP_USERNAME }}
+                  password: ${{ env.FTP_PASSWORD }}
                   protocol: ftp
                   local-dir: ./docs/
                   server-dir: /docs/
@@ -95,7 +123,11 @@ jobs:
             # 4) Deploy node_modules -> /node_modules/
             # Only install+deploy node_modules when deps changed
             - uses: actions/setup-node@v4
-              if: steps.changes.outputs.deps == 'true'
+              if: >-
+                  env.FTP_SERVER != '' &&
+                  env.FTP_USERNAME != '' &&
+                  env.FTP_PASSWORD != '' &&
+                  steps.changes.outputs.deps == 'true'
               with:
                   node-version: 20
                   cache: npm
@@ -107,16 +139,24 @@ jobs:
 
             # Prefer npm ci for CI + reproducible installs
             - name: Install production dependencies
-              if: steps.changes.outputs.deps == 'true'
-              run: npm ci --omit=dev
+              if: >-
+                  env.FTP_SERVER != '' &&
+                  env.FTP_USERNAME != '' &&
+                  env.FTP_PASSWORD != '' &&
+                  steps.changes.outputs.deps == 'true'
+              run: npm ci --omit=dev --ignore-scripts
 
             - name: Deploy node_modules
-              if: steps.changes.outputs.deps == 'true'
+              if: >-
+                  env.FTP_SERVER != '' &&
+                  env.FTP_USERNAME != '' &&
+                  env.FTP_PASSWORD != '' &&
+                  steps.changes.outputs.deps == 'true'
               uses: SamKirkland/FTP-Deploy-Action@v4.3.5
               with:
-                  server: ${{ secrets.FTP_SERVER }}
-                  username: ${{ secrets.FTP_USERNAME }}
-                  password: ${{ secrets.FTP_PASSWORD }}
+                  server: ${{ env.FTP_SERVER }}
+                  username: ${{ env.FTP_USERNAME }}
+                  password: ${{ env.FTP_PASSWORD }}
                   local-dir: ./node_modules/
                   server-dir: /node_modules/
                   exclude: |

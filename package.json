@@ -1,7 +1,7 @@
 {
     "name": "rotary-dial-tester",
     "description": "Rotary dial tester using the Web Serial API",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "author": {
         "name": "André Fiedler"
     },

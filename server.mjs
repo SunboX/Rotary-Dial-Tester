@@ -35,6 +35,12 @@ function configureApp(expressApp, rootDir) {
         next()
     })
 
+    expressApp.get('/package.json', (req, res) => {
+        // Expose project metadata so the browser can display the current app version.
+        res.setHeader('Cache-Control', 'no-store')
+        res.sendFile(path.join(rootDir, 'package.json'))
+    })
+
     expressApp.use(
         '/',
         express.static(path.join(rootDir, 'src'), {

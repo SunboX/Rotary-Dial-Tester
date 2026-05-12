@@ -7,16 +7,13 @@ import path from 'node:path'
 import test from 'node:test'
 
 const htmlPath = path.join(process.cwd(), 'src', 'index.html')
-const packageJsonPath = path.join(process.cwd(), 'package.json')
-
 /**
- * Ensures the footer version label matches package.json.
+ * Ensures the footer version label is populated from package metadata at runtime.
  * @returns {void}
  */
-test('index.html footer version matches package.json', () => {
+test('index.html footer version is loaded from package.json', () => {
     const html = fs.readFileSync(htmlPath, 'utf8')
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
 
-    // Keep the visible footer version in sync with the release version.
-    assert.ok(html.includes(`id="appVersion">${packageJson.version}</span>`))
+    // Keep the visible footer version tied to deployed package metadata instead of duplicated markup.
+    assert.match(html, /<span id="appVersion" data-version-source="\.\/package\.json">\.\.\.<\/span>/)
 })

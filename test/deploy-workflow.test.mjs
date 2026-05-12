@@ -75,3 +75,33 @@ test('FTP deploy workflow installs production dependencies without lifecycle scr
 
     assert.ok(stepBlock.includes('npm ci --omit=dev --ignore-scripts'))
 })
+
+/**
+ * Ensures package metadata is published so the browser can read the app version.
+ * @returns {void}
+ */
+test('FTP deploy workflow publishes package metadata for runtime version display', () => {
+    const workflow = readWorkflow()
+    const prepareStepBlock = getStepBlock(workflow, 'Prepare package metadata for deployment')
+    const deployStepBlock = getStepBlock(workflow, 'Deploy package metadata')
+
+    assert.ok(prepareStepBlock.includes('cp package.json .deploy-metadata/package.json'))
+    assert.ok(deployStepBlock.includes('local-dir: ./.deploy-metadata/'))
+    assert.ok(deployStepBlock.includes('server-dir: /'))
+})
+
+/**
+ * Ensures the optional FTP port secret is forwarded to every FTP action.
+ * @returns {void}
+ */
+test('FTP deploy workflow passes the configured FTP port to deploy actions', () => {
+    const workflow = readWorkflow()
+    const deploySteps = ['Deploy src to /', 'Deploy package metadata', 'Deploy api to /api/', 'Deploy docs to /docs/', 'Deploy node_modules']
+
+    assert.ok(workflow.includes('FTP_PORT: ${{ secrets.FTP_PORT }}'))
+
+    for (const stepName of deploySteps) {
+        const stepBlock = getStepBlock(workflow, stepName)
+        assert.ok(stepBlock.includes('port: ${{ env.FTP_PORT }}'), `${stepName} must pass FTP_PORT.`)
+    }
+})

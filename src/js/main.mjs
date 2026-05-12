@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { AppController } from './app/AppController.mjs'
+import { loadAppVersion } from './app/AppVersion.mjs'
 import { DiagramRuntime } from './app/DiagramRuntime.mjs'
 import { RuntimeBridge } from './app/RuntimeBridge.mjs'
 import { UiRuntime } from './app/UiRuntime.mjs'
@@ -606,9 +607,7 @@ async function exportStripAction(format) {
     }
 
     const diagramIds = diagramRuntime.getVisibleDiagramIds()
-    const canvases = cards
-        .map((card) => /** @type {HTMLCanvasElement|null} */ (card.querySelector('canvas')))
-        .filter(Boolean)
+    const canvases = cards.map((card) => /** @type {HTMLCanvasElement|null} */ (card.querySelector('canvas'))).filter(Boolean)
 
     const exported = await runtimeBridge.exportStrip(diagramIds, canvases, format, composeStripImage)
 
@@ -836,6 +835,7 @@ ui.resetSignalIndicators()
 ui.setDiagramCount(0)
 updateButtons()
 setPortLabel()
+void loadAppVersion()
 
 runtimeBridge.scheduleRenderWorkerInit(ui.dom.analysisCanvas, () => {
     refreshDiagramCards()

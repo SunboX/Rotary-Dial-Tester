@@ -20,6 +20,7 @@ jobs:
             FTP_SERVER: ${{ secrets.FTP_SERVER }}
             FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
             FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+            FTP_PORT: ${{ secrets.FTP_PORT }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -63,6 +64,7 @@ jobs:
                   server: ${{ env.FTP_SERVER }}
                   username: ${{ env.FTP_USERNAME }}
                   password: ${{ env.FTP_PASSWORD }}
+                  port: ${{ env.FTP_PORT }}
                   protocol: ftp
                   local-dir: ./src/
                   server-dir: /
@@ -73,6 +75,33 @@ jobs:
                       **/*.env
                       **/*.env.*
                   state-name: .ftp-deploy-src-state.json
+
+            - name: Prepare package metadata for deployment
+              if: >-
+                  env.FTP_SERVER != '' &&
+                  env.FTP_USERNAME != '' &&
+                  env.FTP_PASSWORD != '' &&
+                  steps.changes.outputs.deps == 'true'
+              run: |
+                  mkdir -p .deploy-metadata
+                  cp package.json .deploy-metadata/package.json
+
+            - name: Deploy package metadata
+              if: >-
+                  env.FTP_SERVER != '' &&
+                  env.FTP_USERNAME != '' &&
+                  env.FTP_PASSWORD != '' &&
+                  steps.changes.outputs.deps == 'true'
+              uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+              with:
+                  server: ${{ env.FTP_SERVER }}
+                  username: ${{ env.FTP_USERNAME }}
+                  password: ${{ env.FTP_PASSWORD }}
+                  port: ${{ env.FTP_PORT }}
+                  protocol: ftp
+                  local-dir: ./.deploy-metadata/
+                  server-dir: /
+                  state-name: .ftp-deploy-package-state.json
 
             # 2) Deploy PHP backend -> /api/
             - name: Deploy api to /api/
@@ -86,6 +115,7 @@ jobs:
                   server: ${{ env.FTP_SERVER }}
                   username: ${{ env.FTP_USERNAME }}
                   password: ${{ env.FTP_PASSWORD }}
+                  port: ${{ env.FTP_PORT }}
                   protocol: ftp
                   local-dir: ./api/
                   server-dir: /api/
@@ -109,6 +139,7 @@ jobs:
                   server: ${{ env.FTP_SERVER }}
                   username: ${{ env.FTP_USERNAME }}
                   password: ${{ env.FTP_PASSWORD }}
+                  port: ${{ env.FTP_PORT }}
                   protocol: ftp
                   local-dir: ./docs/
                   server-dir: /docs/
@@ -157,6 +188,7 @@ jobs:
                   server: ${{ env.FTP_SERVER }}
                   username: ${{ env.FTP_USERNAME }}
                   password: ${{ env.FTP_PASSWORD }}
+                  port: ${{ env.FTP_PORT }}
                   local-dir: ./node_modules/
                   server-dir: /node_modules/
                   exclude: |
